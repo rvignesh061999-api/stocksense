@@ -1,6 +1,7 @@
 // StockSense Service Worker v2.0
 // Handles push notifications, live scan progress notification, and background sync
 
+const SW_VERSION = 'v2.0 — 24 Jun 2026 19:00'; // UPDATE THIS when uploading new sw.js
 const CACHE_NAME = 'stocksense-v33';
 
 // ===== INSTALL =====
@@ -183,6 +184,12 @@ self.addEventListener('message', event => {
     case 'CLEAR_LIVE_NOTIFICATION': {
       self.registration.getNotifications({ tag: 'stocksense-live' })
         .then(notifs => notifs.forEach(n => n.close()));
+      break;
+    }
+
+    // Version check — page asks SW what version it is
+    case 'VERSION_CHECK': {
+      event.source.postMessage({ type: 'SW_VERSION', version: SW_VERSION });
       break;
     }
   }
