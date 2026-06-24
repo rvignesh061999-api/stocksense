@@ -8464,9 +8464,12 @@ async function startTimerScan(){
   timerScanStop = false;
   timerScanCount = 0;
   await requestWakeLock();
-  // Wait for Service Worker to finish registering (async — may not be ready on first load)
+  // Wait for Service Worker to finish registering — with 3s timeout so scan always starts
   if ('serviceWorker' in navigator) {
-    await navigator.serviceWorker.ready.catch(() => {});
+    await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise(resolve => setTimeout(resolve, 3000))
+    ]).catch(() => {});
   }
   const maxScans = parseInt(document.getElementById('timerMaxScans')?.value || 0);
   const restSecs = parseInt(document.getElementById('timerRestDuration')?.value || 300);
@@ -10177,8 +10180,9 @@ async function registerServiceWorker() {
   }
   try {
     swRegistration = await navigator.serviceWorker.register('/sw.js');
+    // Force update check — ensures new sw.js is picked up immediately after GitHub deploy
+    await swRegistration.update().catch(() => {});
     appLog('SW','SERVICE WORKER REGISTERED',`Scope: ${swRegistration.scope} — background timer + notifications enabled`,'success');
-    // Check existing notification permission
     notifPermission = Notification?.permission || 'default';
     if (notifPermission === 'granted') {
       appLog('SW','NOTIFICATIONS READY','Push notifications already granted ✅','success');
