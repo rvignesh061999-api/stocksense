@@ -1721,7 +1721,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="versionStamp" style="margin-top:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:6px;font-size:8px;color:var(--muted);letter-spacing:1px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span>📄 index.html</span>
-          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V33.1 — 24 Jun 2026 19:00</span>
+          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V33.1 — 24 Jun 2026 17:35</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <span>⚙️ sw.js</span>
@@ -2143,7 +2143,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="alertList"></div>
     </div>
 
-    <div style="text-align:center;padding:20px;font-size:9px;letter-spacing:2px;color:var(--muted2)">STOCKSENSE V28 — ULTIMATE TRADING SUITE 🚀</div>
+    <div style="text-align:center;padding:20px;font-size:9px;letter-spacing:2px;color:var(--muted2)">STOCKSENSE V33.1 — ULTIMATE TRADING SUITE 🚀</div>
   </div>
 
   <!-- ADMIN PAGE V30 — KIBANA STYLE -->
@@ -10253,8 +10253,9 @@ function sendSignalNotification(signal) {
   const icon = isShort ? '📉' : '📈';
   const body = `${signal.symbol} ${signal.confidence}% | ₹${signal.price?.toFixed(2)} | RSI: ${signal.rsi?.toFixed(1)} | Vol: ${signal.volRatio?.toFixed(2)}x${signal.sectorWeak ? ' | ⚠️ Sector Weak' : ''}`;
   // Try Service Worker first (works when backgrounded)
-  if (swRegistration?.active) {
-    swRegistration.active.postMessage({
+  const sw = swRegistration?.active || navigator.serviceWorker?.controller;
+  if (sw) {
+    sw.postMessage({
       type: 'SHOW_SIGNAL_NOTIFICATION',
       signal: signal.signal, symbol: signal.symbol,
       confidence: signal.confidence, price: signal.price?.toFixed(2),
@@ -10274,7 +10275,9 @@ function sendSignalNotification(signal) {
 
 // ===== SW MESSAGING HELPERS =====
 function swPost(msg) {
-  if (swRegistration?.active) swRegistration.active.postMessage(msg);
+  // Use active SW or controller — controller is more reliable after page load
+  const sw = swRegistration?.active || navigator.serviceWorker?.controller;
+  if (sw) sw.postMessage(msg);
 }
 
 function swClearLive() { swPost({ type: 'CLEAR_LIVE_NOTIFICATION' }); }
