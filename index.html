@@ -1331,7 +1331,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 <div class="app">
   <!-- TOPBAR -->
   <div class="topbar">
-    <div class="logo">STOCK<span>SENSE</span><small>V29</small></div>
+    <div class="logo">STOCK<span>SENSE</span><small>V33.1</small></div>
     <div style="display:flex;align-items:center;gap:8px">
       <!-- V27 Fix 14 — Server status visible on ALL tabs -->
       <div id="globalServerDot" onclick="checkGlobalServer()"
@@ -1721,7 +1721,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="versionStamp" style="margin-top:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:6px;font-size:8px;color:var(--muted);letter-spacing:1px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span>📄 index.html</span>
-          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V33.1 — 24 Jun 2026 17:35</span>
+          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V33.1 — 24 Jun 2026 18:05</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <span>⚙️ sw.js</span>
@@ -10277,7 +10277,15 @@ function sendSignalNotification(signal) {
 function swPost(msg) {
   // Use active SW or controller — controller is more reliable after page load
   const sw = swRegistration?.active || navigator.serviceWorker?.controller;
-  if (sw) sw.postMessage(msg);
+  if (sw) {
+    sw.postMessage(msg);
+  } else {
+    // Controller not ready yet — wait for it then resend
+    navigator.serviceWorker?.ready.then(reg => {
+      const sw2 = reg.active || navigator.serviceWorker?.controller;
+      if (sw2) sw2.postMessage(msg);
+    });
+  }
 }
 
 function swClearLive() { swPost({ type: 'CLEAR_LIVE_NOTIFICATION' }); }
@@ -10320,6 +10328,12 @@ async function fetchVersionServerTag() {
 window.addEventListener('load', () => {
   registerServiceWorker();
   fetchVersionServerTag();
+});
+
+// When a new SW takes control — reload once so controller is active immediately
+navigator.serviceWorker?.addEventListener('controllerchange', () => {
+  appLog('SW', 'SW CONTROLLER CHANGED', 'New SW took control — reloading for notifications to work', 'info');
+  window.location.reload();
 });
 const SERVER_OPTIONS = {
   A: { label: 'V7.2 — rvignesh061999', url: 'https://stock-sense-server--rvignesh061999.replit.app/api' },
