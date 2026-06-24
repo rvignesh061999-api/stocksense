@@ -8463,7 +8463,11 @@ async function startTimerScan(){
   timerScanRunning = true;
   timerScanStop = false;
   timerScanCount = 0;
-  await requestWakeLock(); // Solution 4: Keep screen/tab alive
+  await requestWakeLock();
+  // Wait for Service Worker to finish registering (async — may not be ready on first load)
+  if ('serviceWorker' in navigator) {
+    await navigator.serviceWorker.ready.catch(() => {});
+  }
   const maxScans = parseInt(document.getElementById('timerMaxScans')?.value || 0);
   const restSecs = parseInt(document.getElementById('timerRestDuration')?.value || 300);
   timerRestSeconds = restSecs;
@@ -8536,7 +8540,8 @@ function stopTimerScan(){
   timerScanStop = true;
   timerScanRunning = false;
   if(timerInterval){ clearInterval(timerInterval); timerInterval = null; }
-  stopWorkerTimer(); // Solution 3: stop the worker
+  stopWorkerTimer();
+  swClearLive(); // Remove the persistent scan notification
   document.getElementById('timerStartBtn').disabled = false;
   document.getElementById('timerStopBtn').disabled = true;
   updateTimerDisplay('idle', null, 'Stopped by user');
@@ -8572,10 +8577,17 @@ async function runRestTimer(){
     updateTimerDisplay('resting', secs, `Resting before scan #${timerScanCount+1}`);
     document.getElementById('timerProgressBox').style.display = 'none';
 
+    // Send initial REST_TICK immediately when rest starts
+    swPost({ type: 'REST_TICK', secsLeft: secs, scanNum: timerScanCount, lastSignals: window._lastTimerSignals || [] });
+
     timerInterval = setInterval(() => {
       if(timerScanStop){ clearInterval(timerInterval); resolve(); return; }
       secs--;
       updateTimerDisplay('resting', secs, `Resting ${secs}s before scan #${timerScanCount+1}`);
+      // Update REST_TICK every 30 seconds so notification shows current countdown
+      if(secs % 30 === 0 && secs > 0) {
+        swPost({ type: 'REST_TICK', secsLeft: secs, scanNum: timerScanCount, lastSignals: window._lastTimerSignals || [] });
+      }
       if(secs <= 0){ clearInterval(timerInterval); timerInterval = null; resolve(); }
     }, 1000);
   });
@@ -8656,9 +8668,13 @@ async function runTimerScanOnce(){
       if(signal === 'BUY' || signal === 'SHORT'){
         buyCount += signal==='BUY'?1:0;
         shortCount += signal==='SHORT'?1:0;
-        // Send push notification for each signal (fires even when app is backgrounded)
+        // Send push notification for each signal
         if (signal === 'BUY' || signal === 'SHORT') {
           sendSignalNotification(r);
+        }
+        // Update live progress notification every 8 stocks
+        if (i % 8 === 0 || i === stocks.length - 1) {
+          swPost({ type: 'SCAN_PROGRESS', scanned: i + 1, total: stocks.length, buys: buyCount, shorts: shortCount, scanNum: timerScanCount + 1 });
         }
         appLog('TIMER',`${symbol} — ${signal} ${confidence}%`,
           `₹${r.price} | RSI ${r.rsi} | EMA ${r.emaBull?'Bull':'Bear'} | Vol ${r.volRatio}x (${volTrend}) | ${r.candle} | ${r.priceChange>=0?'+':''}${r.priceChange}%${r.isExtended?' | ⚠️EXTENDED':''}${r.isPennyStock?' | ⚠️PENNY':''}${r.highRiskSL?' | 🔴HIGH RISK SL':''} | ${fetchMs}ms`,
@@ -8686,6 +8702,18 @@ async function runTimerScanOnce(){
   appLog('TIMER','SCAN COMPLETE',
     `Scan #${timerScanCount+1} | ${stocks.length} stocks | 🟢 BUY: ${buyCount} | 🔴 SHORT: ${shortCount} | 🚫 Blocks: ${hardBlocks} | ❌ Errors: ${fetchErrors}`,
     buyCount+shortCount > 0 ? 'success' : 'info');
+
+  // Store last signals for rest notification
+  window._lastTimerSignals = results.filter(r => r.signal==='BUY'||r.signal==='SHORT');
+
+  // SCAN_COMPLETE notification
+  swPost({
+    type: 'SCAN_COMPLETE',
+    scanNum: timerScanCount + 1,
+    buys: results.filter(r=>r.signal==='BUY').map(r=>({signal:'BUY',symbol:r.symbol,confidence:r.confidence,price:r.price?.toFixed(2)})),
+    shorts: results.filter(r=>r.signal==='SHORT').map(r=>({signal:'SHORT',symbol:r.symbol,confidence:r.confidence,price:r.price?.toFixed(2)})),
+    restSecs: timerRestSeconds
+  });
 
   // V34: Sector weakness detection on timer scan results
   const sectorWeakness = analyseSectors(results);
@@ -10190,19 +10218,49 @@ async function requestNotificationPermission() {
 
 // Send signal notification via Service Worker (works even when tab is backgrounded)
 function sendSignalNotification(signal) {
-  if (!swRegistration || !swRegistration.active) return;
   if (Notification.permission !== 'granted') return;
-  swRegistration.active.postMessage({
-    type: 'SHOW_SIGNAL_NOTIFICATION',
-    signal: signal.signal,
-    symbol: signal.symbol,
-    confidence: signal.confidence,
-    price: signal.price?.toFixed(2),
-    rsi: signal.rsi?.toFixed(1),
-    volRatio: signal.volRatio?.toFixed(2),
-    sectorWeak: signal.sectorWeak || false
-  });
+  const isShort = signal.signal === 'SHORT';
+  const icon = isShort ? '📉' : '📈';
+  const body = `${signal.symbol} ${signal.confidence}% | ₹${signal.price?.toFixed(2)} | RSI: ${signal.rsi?.toFixed(1)} | Vol: ${signal.volRatio?.toFixed(2)}x${signal.sectorWeak ? ' | ⚠️ Sector Weak' : ''}`;
+  // Try Service Worker first (works when backgrounded)
+  if (swRegistration?.active) {
+    swRegistration.active.postMessage({
+      type: 'SHOW_SIGNAL_NOTIFICATION',
+      signal: signal.signal, symbol: signal.symbol,
+      confidence: signal.confidence, price: signal.price?.toFixed(2),
+      rsi: signal.rsi?.toFixed(1), volRatio: signal.volRatio?.toFixed(2),
+      sectorWeak: signal.sectorWeak || false
+    });
+  } else {
+    // Fallback: direct Notification API (works when app is in foreground)
+    try {
+      new Notification(`${icon} StockSense — ${signal.signal} Signal`, {
+        body, tag: `stocksense-${signal.symbol}`,
+        vibrate: isShort ? [400,100,400] : [200,100,200]
+      });
+    } catch(e) {}
+  }
 }
+
+// ===== SW MESSAGING HELPERS =====
+function swPost(msg) {
+  if (swRegistration?.active) swRegistration.active.postMessage(msg);
+}
+
+function swClearLive() { swPost({ type: 'CLEAR_LIVE_NOTIFICATION' }); }
+
+// Listen for SW→tab messages (Stop / Scan Now actions from notification)
+navigator.serviceWorker?.addEventListener('message', event => {
+  if (event.data?.type === 'SW_STOP_SCAN') {
+    if (timerScanRunning) { stopTimerScan(); showNotification('⏹ Scan stopped from notification', 3000); }
+  }
+  if (event.data?.type === 'SW_SCAN_NOW') {
+    if (timerScanRunning && timerInterval) {
+      clearInterval(timerInterval); timerInterval = null;
+    }
+    showNotification('⚡ Skipping rest — scanning now!', 2000);
+  }
+});
 
 // Register on page load
 window.addEventListener('load', () => {
