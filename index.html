@@ -1721,7 +1721,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="versionStamp" style="margin-top:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:6px;font-size:8px;color:var(--muted);letter-spacing:1px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span>📄 index.html</span>
-          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V33.1 — 24 Jun 2026 18:05</span>
+          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V33.1 — 25 Jun 2026 10:45</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <span>⚙️ sw.js</span>
@@ -8237,9 +8237,13 @@ document.addEventListener('visibilitychange', async () => {
 // the same way it throttles main tab JS timers (setInterval/setTimeout).
 // The worker sends a 'tick' message to the main tab every N seconds.
 // The main tab triggers the scan on each tick.
+// Also sends 'countdown' every second for the rest timer display.
 // Falls back to regular setInterval if Worker fails.
 const workerCode = `
   let interval = null;
+  let countdownInterval = null;
+  let countdownSecs = 0;
+
   self.onmessage = function(e) {
     if(e.data.action === 'start') {
       if(interval) clearInterval(interval);
@@ -8251,7 +8255,24 @@ const workerCode = `
     }
     if(e.data.action === 'stop') {
       if(interval){ clearInterval(interval); interval = null; }
+      if(countdownInterval){ clearInterval(countdownInterval); countdownInterval = null; }
       self.postMessage({ type: 'stopped' });
+    }
+    // Start per-second countdown for rest timer display
+    if(e.data.action === 'startCountdown') {
+      if(countdownInterval){ clearInterval(countdownInterval); countdownInterval = null; }
+      countdownSecs = e.data.secs;
+      countdownInterval = setInterval(() => {
+        countdownSecs--;
+        self.postMessage({ type: 'countdown', secs: countdownSecs });
+        if(countdownSecs <= 0){
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
+      }, 1000);
+    }
+    if(e.data.action === 'stopCountdown') {
+      if(countdownInterval){ clearInterval(countdownInterval); countdownInterval = null; }
     }
   };
 `;
@@ -8271,6 +8292,15 @@ function startWorkerTimer(intervalMs) {
         appLog('TIMER','WORKER TICK',`Worker timer fired at ${new Date(e.data.time).toLocaleTimeString('en-IN')} — triggering rest timer`,'info');
         // Signal the rest timer to expire immediately so the next scan starts
         if(timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+      }
+      // Per-second countdown from worker — updates rest timer display even when backgrounded
+      if(e.data.type === 'countdown') {
+        const secs = e.data.secs;
+        updateTimerDisplay('resting', secs, `RESTING ${secs}S BEFORE SCAN #${timerScanCount+1}`);
+        if(secs % 30 === 0 && secs > 0) {
+          appLog('SW', `REST_TICK → ${secs}s left`, `Next scan in ${Math.floor(secs/60)}m ${secs%60}s`, 'info');
+          swPost({ type: 'REST_TICK', secsLeft: secs, scanNum: timerScanCount, lastSignals: window._lastTimerSignals || [] });
+        }
       }
       if(e.data.type === 'started') {
         appLog('TIMER','WORKER STARTED',`Web Worker timer running — interval: ${Math.round(e.data.intervalMs/1000)}s | Scans will fire even if Chrome is backgrounded`,'success');
@@ -8595,22 +8625,52 @@ function updateTimerDisplay(state, seconds, statusText){
 async function runRestTimer(){
   return new Promise(resolve => {
     let secs = timerRestSeconds;
-    updateTimerDisplay('resting', secs, `Resting before scan #${timerScanCount+1}`);
+    updateTimerDisplay('resting', secs, `RESTING ${secs}S BEFORE SCAN #${timerScanCount+1}`);
     document.getElementById('timerProgressBox').style.display = 'none';
 
     // Send initial REST_TICK immediately when rest starts
+    appLog('SW', `REST_TICK START → ${secs}s`, `Scan #${timerScanCount} done | Sending REST_TICK to SW...`, 'info');
     swPost({ type: 'REST_TICK', secsLeft: secs, scanNum: timerScanCount, lastSignals: window._lastTimerSignals || [] });
 
-    timerInterval = setInterval(() => {
-      if(timerScanStop){ clearInterval(timerInterval); resolve(); return; }
-      secs--;
-      updateTimerDisplay('resting', secs, `Resting ${secs}s before scan #${timerScanCount+1}`);
-      // Update REST_TICK every 30 seconds so notification shows current countdown
-      if(secs % 30 === 0 && secs > 0) {
-        swPost({ type: 'REST_TICK', secsLeft: secs, scanNum: timerScanCount, lastSignals: window._lastTimerSignals || [] });
-      }
-      if(secs <= 0){ clearInterval(timerInterval); timerInterval = null; resolve(); }
-    }, 1000);
+    // Use Web Worker for countdown — NOT setInterval (throttled by Android when backgrounded)
+    if(timerWorker) {
+      appLog('TIMER', 'REST COUNTDOWN', `Starting Worker countdown — ${secs}s — immune to Android throttling`, 'success');
+      timerWorker.postMessage({ action: 'startCountdown', secs });
+    } else {
+      // Fallback to setInterval if worker unavailable
+      appLog('TIMER', 'REST COUNTDOWN FALLBACK', 'Worker not available — using setInterval (may freeze when backgrounded)', 'warn');
+      timerInterval = setInterval(() => {
+        secs--;
+        updateTimerDisplay('resting', secs, `RESTING ${secs}S BEFORE SCAN #${timerScanCount+1}`);
+        if(secs % 30 === 0 && secs > 0) {
+          swPost({ type: 'REST_TICK', secsLeft: secs, scanNum: timerScanCount, lastSignals: window._lastTimerSignals || [] });
+        }
+        if(secs <= 0){ clearInterval(timerInterval); timerInterval = null; }
+      }, 1000);
+    }
+
+    // Worker tick fires when full rest period completes → resolve and start next scan
+    const origOnMessage = timerWorker?.onmessage;
+    const checkResolve = setInterval(() => {
+      if(timerScanStop){ clearInterval(checkResolve); if(timerWorker) timerWorker.postMessage({action:'stopCountdown'}); resolve(); return; }
+      // Worker countdown reaching 0 will also have fired the tick — check if rest is done
+      if(!timerWorker) { clearInterval(checkResolve); resolve(); }
+    }, 500);
+
+    // Also resolve when worker tick fires (main rest timer fires)
+    const origWorkerMsg = timerWorker?.onmessage;
+    if(timerWorker){
+      const prevOnMsg = timerWorker.onmessage;
+      timerWorker.onmessage = function(e) {
+        prevOnMsg && prevOnMsg(e);
+        if(e.data.type === 'tick') {
+          // Full rest period done — stop countdown and resolve
+          timerWorker.postMessage({ action: 'stopCountdown' });
+          clearInterval(checkResolve);
+          resolve();
+        }
+      };
+    }
   });
 }
 
@@ -8621,6 +8681,10 @@ async function runTimerScanOnce(){
   const mood = marketMood || load('market_mood_today', null);
 
   appLog('TIMER','SCAN START',`Scan #${timerScanCount+1} | ${stocks.length} stocks | Capital ₹${capital} | Mood: ${mood||'none'} | Engine: /api/scan (V7 server-side)`,'info');
+  appLog('SW', 'SW STATE AT SCAN START',
+    `controller:${navigator.serviceWorker?.controller ? 'ACTIVE ✅' : 'NULL ❌'} | swReg.active:${swRegistration?.active ? 'YES ✅' : 'NULL ❌'} | permission:${Notification?.permission}`,
+    navigator.serviceWorker?.controller ? 'success' : 'warn'
+  );
 
   document.getElementById('timerProgressFill').style.width = '0%';
   document.getElementById('timerProgressText').textContent = `0/${stocks.length}`;
@@ -8695,6 +8759,7 @@ async function runTimerScanOnce(){
         }
         // Update live progress notification every 8 stocks
         if (i % 8 === 0 || i === stocks.length - 1) {
+          appLog('SW', `SCAN_PROGRESS → ${i+1}/${stocks.length}`, `BUY:${buyCount} SHORT:${shortCount} | Sending to SW...`, 'info');
           swPost({ type: 'SCAN_PROGRESS', scanned: i + 1, total: stocks.length, buys: buyCount, shorts: shortCount, scanNum: timerScanCount + 1 });
         }
         appLog('TIMER',`${symbol} — ${signal} ${confidence}%`,
@@ -8728,6 +8793,7 @@ async function runTimerScanOnce(){
   window._lastTimerSignals = results.filter(r => r.signal==='BUY'||r.signal==='SHORT');
 
   // SCAN_COMPLETE notification
+  appLog('SW', 'SCAN_COMPLETE → SW', `Scan #${timerScanCount+1} done | BUY:${buyCount} SHORT:${shortCount} | Sending SCAN_COMPLETE...`, 'info');
   swPost({
     type: 'SCAN_COMPLETE',
     scanNum: timerScanCount + 1,
@@ -10275,14 +10341,24 @@ function sendSignalNotification(signal) {
 
 // ===== SW MESSAGING HELPERS =====
 function swPost(msg) {
-  // Use active SW or controller — controller is more reliable after page load
-  const sw = swRegistration?.active || navigator.serviceWorker?.controller;
+  // Diagnostic logging — shows exactly what's available at message time
+  const controller = navigator.serviceWorker?.controller;
+  const active = swRegistration?.active;
+  const sw = active || controller;
+
+  appLog('SW', `swPost → ${msg.type}`,
+    `controller:${controller ? 'ACTIVE ✅' : 'NULL ❌'} | swReg.active:${active ? 'YES ✅' : 'NULL ❌'} | sending:${sw ? 'YES ✅' : 'NO — queued ⚠️'}`,
+    sw ? 'info' : 'warn'
+  );
+
   if (sw) {
     sw.postMessage(msg);
   } else {
     // Controller not ready yet — wait for it then resend
+    appLog('SW', 'swPost QUEUED', `Waiting for SW ready — will resend ${msg.type}`, 'warn');
     navigator.serviceWorker?.ready.then(reg => {
       const sw2 = reg.active || navigator.serviceWorker?.controller;
+      appLog('SW', 'swPost RETRY', `After ready: sw2=${sw2 ? 'FOUND ✅' : 'STILL NULL ❌'} — ${msg.type}`, sw2 ? 'success' : 'error');
       if (sw2) sw2.postMessage(msg);
     });
   }
