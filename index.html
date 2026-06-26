@@ -1721,11 +1721,11 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="versionStamp" style="margin-top:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:6px;font-size:8px;color:var(--muted);letter-spacing:1px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span>📄 index.html</span>
-          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V33.1 — 26 Jun 2026 11:10</span>
+          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V33.1 — 26 Jun 2026 11:40</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <span>⚙️ sw.js</span>
-          <span style="color:var(--green);font-weight:700" id="versionSwTag">v2.0 — 24 Jun 2026 19:00</span>
+          <span style="color:var(--green);font-weight:700" id="versionSwTag">v2.1 — 26 Jun 2026 11:30</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <span>🖥️ server</span>
@@ -8299,7 +8299,7 @@ function startWorkerTimer(intervalMs) {
       if(e.data.type === 'countdown') {
         const secs = e.data.secs;
         updateTimerDisplay('resting', secs, `RESTING ${secs}S BEFORE SCAN #${timerScanCount+1}`);
-        if(secs % 30 === 0 && secs > 0) {
+        if(secs % 10 === 0 && secs > 0) {
           appLog('SW', `REST_TICK → ${secs}s left`, `Next scan in ${Math.floor(secs/60)}m ${secs%60}s`, 'info');
           swPost({ type: 'REST_TICK', secsLeft: secs, scanNum: timerScanCount, lastSignals: window._lastTimerSignals || [] });
         }
@@ -8668,7 +8668,7 @@ async function runRestTimer(){
         if(timerScanStop){ clearInterval(timerInterval); timerInterval = null; doResolve(); return; }
         secs--;
         updateTimerDisplay('resting', secs, `RESTING ${secs}S BEFORE SCAN #${timerScanCount+1}`);
-        if(secs % 30 === 0 && secs > 0) {
+        if(secs % 10 === 0 && secs > 0) {
           swPost({ type: 'REST_TICK', secsLeft: secs, scanNum: timerScanCount, lastSignals: window._lastTimerSignals || [] });
         }
         if(secs <= 0){ clearInterval(timerInterval); timerInterval = null; doResolve(); }
@@ -8760,8 +8760,8 @@ async function runTimerScanOnce(){
         if (signal === 'BUY' || signal === 'SHORT') {
           sendSignalNotification(r);
         }
-        // Update live progress notification every 8 stocks
-        if (i % 8 === 0 || i === stocks.length - 1) {
+        // Update live progress notification — fire at stock 1 then every 5
+        if (i === 0 || i % 5 === 0 || i === stocks.length - 1) {
           appLog('SW', `SCAN_PROGRESS → ${i+1}/${stocks.length}`, `BUY:${buyCount} SHORT:${shortCount} | Sending to SW...`, 'info');
           swPost({ type: 'SCAN_PROGRESS', scanned: i + 1, total: stocks.length, buys: buyCount, shorts: shortCount, scanNum: timerScanCount + 1 });
         }

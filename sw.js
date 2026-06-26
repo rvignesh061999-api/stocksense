@@ -1,7 +1,7 @@
 // StockSense Service Worker v2.0
 // Handles push notifications, live scan progress notification, and background sync
 
-const SW_VERSION = 'v2.0 — 24 Jun 2026 19:00'; // UPDATE THIS when uploading new sw.js
+const SW_VERSION = 'v2.1 — 26 Jun 2026 11:30'; // UPDATE THIS when uploading new sw.js
 const CACHE_NAME = 'stocksense-v33';
 
 // ===== INSTALL =====
@@ -99,7 +99,6 @@ self.addEventListener('message', event => {
         tag: 'stocksense-live',          // same tag = updates in place, no stacking
         renotify: false,                  // silent update — no sound/vibration on progress
         silent: true,
-        ongoing: true,                    // Android: can't be swiped away while scan runs
         data: { type: 'progress' },
         actions: [
           { action: 'stop', title: '⏹ Stop' }
@@ -158,25 +157,10 @@ self.addEventListener('message', event => {
       break;
     }
 
-    // Individual signal notification (fired for each BUY/SHORT)
+    // Individual signal notification — DISABLED
+    // All signals shown together in SCAN_COMPLETE summary instead
     case 'SHOW_SIGNAL_NOTIFICATION': {
-      const isShort = d.signal === 'SHORT';
-      self.registration.showNotification(
-        `${isShort ? '📉' : '📈'} StockSense — ${d.signal} Signal`,
-        {
-          body: `${d.symbol} ${d.confidence}% | ₹${d.price} | RSI: ${d.rsi} | Vol: ${d.volRatio}x${d.sectorWeak ? '\n⚠️ Sector Weak' : ''}`,
-          icon: '/icon-192.png',
-          badge: '/icon-72.png',
-          tag: `stocksense-signal-${d.symbol}`,
-          renotify: true,
-          vibrate: isShort ? [400, 100, 400, 100, 800] : [200, 100, 200],
-          data: { type: 'signal', signal: d.signal, symbol: d.symbol },
-          actions: [
-            { action: 'view', title: '👁 View' },
-            { action: 'dismiss', title: '✕ Dismiss' }
-          ]
-        }
-      );
+      // Signals are batched in SCAN_COMPLETE — no individual notifications
       break;
     }
 
