@@ -1721,7 +1721,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="versionStamp" style="margin-top:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:6px;font-size:8px;color:var(--muted);letter-spacing:1px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span>📄 index.html</span>
-          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V33.1 — 25 Jun 2026 10:45</span>
+          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V33.1 — 26 Jun 2026 11:10</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <span>⚙️ sw.js</span>
@@ -8268,6 +8268,8 @@ const workerCode = `
         if(countdownSecs <= 0){
           clearInterval(countdownInterval);
           countdownInterval = null;
+          // Explicitly post secs:0 so main thread resolves precisely at 0
+          self.postMessage({ type: 'countdown', secs: 0 });
         }
       }, 1000);
     }
@@ -8625,6 +8627,15 @@ function updateTimerDisplay(state, seconds, statusText){
 async function runRestTimer(){
   return new Promise(resolve => {
     let secs = timerRestSeconds;
+    let resolved = false;
+
+    const doResolve = () => {
+      if(resolved) return;
+      resolved = true;
+      if(timerWorker) timerWorker.postMessage({ action: 'stopCountdown' });
+      resolve();
+    };
+
     updateTimerDisplay('resting', secs, `RESTING ${secs}S BEFORE SCAN #${timerScanCount+1}`);
     document.getElementById('timerProgressBox').style.display = 'none';
 
@@ -8632,44 +8643,36 @@ async function runRestTimer(){
     appLog('SW', `REST_TICK START → ${secs}s`, `Scan #${timerScanCount} done | Sending REST_TICK to SW...`, 'info');
     swPost({ type: 'REST_TICK', secsLeft: secs, scanNum: timerScanCount, lastSignals: window._lastTimerSignals || [] });
 
-    // Use Web Worker for countdown — NOT setInterval (throttled by Android when backgrounded)
     if(timerWorker) {
       appLog('TIMER', 'REST COUNTDOWN', `Starting Worker countdown — ${secs}s — immune to Android throttling`, 'success');
+
+      // Override onmessage to catch countdown=0 → resolve exactly at 0
+      const prevOnMsg = timerWorker.onmessage;
+      timerWorker.onmessage = function(e) {
+        // Pass to original handler for display updates
+        prevOnMsg && prevOnMsg(e);
+        // Resolve when countdown reaches 0 — precise timing
+        if(e.data.type === 'countdown' && e.data.secs <= 0) {
+          appLog('TIMER', 'REST COMPLETE', `Countdown reached 0 — starting next scan`, 'success');
+          doResolve();
+        }
+        // Stop if user stopped scan
+        if(timerScanStop) doResolve();
+      };
+
       timerWorker.postMessage({ action: 'startCountdown', secs });
     } else {
       // Fallback to setInterval if worker unavailable
       appLog('TIMER', 'REST COUNTDOWN FALLBACK', 'Worker not available — using setInterval (may freeze when backgrounded)', 'warn');
       timerInterval = setInterval(() => {
+        if(timerScanStop){ clearInterval(timerInterval); timerInterval = null; doResolve(); return; }
         secs--;
         updateTimerDisplay('resting', secs, `RESTING ${secs}S BEFORE SCAN #${timerScanCount+1}`);
         if(secs % 30 === 0 && secs > 0) {
           swPost({ type: 'REST_TICK', secsLeft: secs, scanNum: timerScanCount, lastSignals: window._lastTimerSignals || [] });
         }
-        if(secs <= 0){ clearInterval(timerInterval); timerInterval = null; }
+        if(secs <= 0){ clearInterval(timerInterval); timerInterval = null; doResolve(); }
       }, 1000);
-    }
-
-    // Worker tick fires when full rest period completes → resolve and start next scan
-    const origOnMessage = timerWorker?.onmessage;
-    const checkResolve = setInterval(() => {
-      if(timerScanStop){ clearInterval(checkResolve); if(timerWorker) timerWorker.postMessage({action:'stopCountdown'}); resolve(); return; }
-      // Worker countdown reaching 0 will also have fired the tick — check if rest is done
-      if(!timerWorker) { clearInterval(checkResolve); resolve(); }
-    }, 500);
-
-    // Also resolve when worker tick fires (main rest timer fires)
-    const origWorkerMsg = timerWorker?.onmessage;
-    if(timerWorker){
-      const prevOnMsg = timerWorker.onmessage;
-      timerWorker.onmessage = function(e) {
-        prevOnMsg && prevOnMsg(e);
-        if(e.data.type === 'tick') {
-          // Full rest period done — stop countdown and resolve
-          timerWorker.postMessage({ action: 'stopCountdown' });
-          clearInterval(checkResolve);
-          resolve();
-        }
-      };
     }
   });
 }
@@ -10263,7 +10266,7 @@ async function registerServiceWorker() {
     return;
   }
   try {
-    swRegistration = await navigator.serviceWorker.register('/sw.js');
+    swRegistration = await navigator.serviceWorker.register('./sw.js');
     // Force update check — ensures new sw.js is picked up immediately after GitHub deploy
     await swRegistration.update().catch(() => {});
     appLog('SW','SERVICE WORKER REGISTERED',`Scope: ${swRegistration.scope} — background timer + notifications enabled`,'success');
