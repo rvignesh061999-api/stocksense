@@ -1721,11 +1721,11 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="versionStamp" style="margin-top:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:6px;font-size:8px;color:var(--muted);letter-spacing:1px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span>📄 index.html</span>
-          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V33.1 — 26 Jun 2026 11:40</span>
+          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V33.1 — 27 Jun 2026 06:00</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <span>⚙️ sw.js</span>
-          <span style="color:var(--green);font-weight:700" id="versionSwTag">v2.1 — 26 Jun 2026 11:30</span>
+          <span style="color:var(--green);font-weight:700" id="versionSwTag">v2.1 — 26 Jun 2026 11:50</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <span>🖥️ server</span>
@@ -8281,6 +8281,7 @@ const workerCode = `
 const workerBlob = new Blob([workerCode], {type: 'application/javascript'});
 const workerUrl = URL.createObjectURL(workerBlob);
 let timerWorker = null;
+let baseWorkerHandler = null;
 let workerFallbackInterval = null;
 let lastWorkerTick = 0;
 
@@ -8292,17 +8293,7 @@ function startWorkerTimer(intervalMs) {
       if(e.data.type === 'tick') {
         lastWorkerTick = e.data.time;
         appLog('TIMER','WORKER TICK',`Worker timer fired at ${new Date(e.data.time).toLocaleTimeString('en-IN')} — triggering rest timer`,'info');
-        // Signal the rest timer to expire immediately so the next scan starts
         if(timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-      }
-      // Per-second countdown from worker — updates rest timer display even when backgrounded
-      if(e.data.type === 'countdown') {
-        const secs = e.data.secs;
-        updateTimerDisplay('resting', secs, `RESTING ${secs}S BEFORE SCAN #${timerScanCount+1}`);
-        if(secs % 10 === 0 && secs > 0) {
-          appLog('SW', `REST_TICK → ${secs}s left`, `Next scan in ${Math.floor(secs/60)}m ${secs%60}s`, 'info');
-          swPost({ type: 'REST_TICK', secsLeft: secs, scanNum: timerScanCount, lastSignals: window._lastTimerSignals || [] });
-        }
       }
       if(e.data.type === 'started') {
         appLog('TIMER','WORKER STARTED',`Web Worker timer running — interval: ${Math.round(e.data.intervalMs/1000)}s | Scans will fire even if Chrome is backgrounded`,'success');
@@ -8312,7 +8303,10 @@ function startWorkerTimer(intervalMs) {
       if(e.data.type === 'stopped') {
         appLog('TIMER','WORKER STOPPED','Web Worker timer stopped','info');
       }
+      // countdown messages handled exclusively by runRestTimer's onmessage override
     };
+    // Save reference so runRestTimer can restore it after countdown completes
+    baseWorkerHandler = timerWorker.onmessage;
     timerWorker.onerror = function(e) {
       appLog('TIMER','WORKER ERROR',`${e.message} — falling back to setInterval`,'warn');
       startWorkerFallback(intervalMs);
@@ -8632,38 +8626,43 @@ async function runRestTimer(){
     const doResolve = () => {
       if(resolved) return;
       resolved = true;
-      if(timerWorker) timerWorker.postMessage({ action: 'stopCountdown' });
+      // Restore base handler
+      if(timerWorker) {
+        timerWorker.postMessage({ action: 'stopCountdown' });
+        timerWorker.onmessage = baseWorkerHandler;
+      }
       resolve();
     };
 
     updateTimerDisplay('resting', secs, `RESTING ${secs}S BEFORE SCAN #${timerScanCount+1}`);
     document.getElementById('timerProgressBox').style.display = 'none';
 
-    // Send initial REST_TICK immediately when rest starts
     appLog('SW', `REST_TICK START → ${secs}s`, `Scan #${timerScanCount} done | Sending REST_TICK to SW...`, 'info');
     swPost({ type: 'REST_TICK', secsLeft: secs, scanNum: timerScanCount, lastSignals: window._lastTimerSignals || [] });
 
     if(timerWorker) {
-      appLog('TIMER', 'REST COUNTDOWN', `Starting Worker countdown — ${secs}s — immune to Android throttling`, 'success');
+      appLog('TIMER', 'REST COUNTDOWN', `Starting Worker countdown — ${secs}s`, 'success');
 
-      // Override onmessage to catch countdown=0 → resolve exactly at 0
-      const prevOnMsg = timerWorker.onmessage;
+      // CLEAN override — no chaining with previous handler
       timerWorker.onmessage = function(e) {
-        // Pass to original handler for display updates
-        prevOnMsg && prevOnMsg(e);
-        // Resolve when countdown reaches 0 — precise timing
-        if(e.data.type === 'countdown' && e.data.secs <= 0) {
-          appLog('TIMER', 'REST COMPLETE', `Countdown reached 0 — starting next scan`, 'success');
-          doResolve();
+        if(timerScanStop) { doResolve(); return; }
+        if(e.data.type === 'countdown') {
+          const s = e.data.secs;
+          updateTimerDisplay('resting', s, `RESTING ${s}S BEFORE SCAN #${timerScanCount+1}`);
+          if(s % 10 === 0 && s > 0) {
+            appLog('SW', `REST_TICK → ${s}s left`, `Next scan in ${Math.floor(s/60)}m ${s%60}s`, 'info');
+            swPost({ type: 'REST_TICK', secsLeft: s, scanNum: timerScanCount, lastSignals: window._lastTimerSignals || [] });
+          }
+          if(s <= 0) {
+            appLog('TIMER', 'REST COMPLETE', `Countdown hit 0 — starting scan #${timerScanCount+1}`, 'success');
+            doResolve();
+          }
         }
-        // Stop if user stopped scan
-        if(timerScanStop) doResolve();
       };
 
       timerWorker.postMessage({ action: 'startCountdown', secs });
     } else {
-      // Fallback to setInterval if worker unavailable
-      appLog('TIMER', 'REST COUNTDOWN FALLBACK', 'Worker not available — using setInterval (may freeze when backgrounded)', 'warn');
+      appLog('TIMER', 'REST COUNTDOWN FALLBACK', 'Worker unavailable — using setInterval', 'warn');
       timerInterval = setInterval(() => {
         if(timerScanStop){ clearInterval(timerInterval); timerInterval = null; doResolve(); return; }
         secs--;
