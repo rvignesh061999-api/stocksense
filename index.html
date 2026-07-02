@@ -1721,7 +1721,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="versionStamp" style="margin-top:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:6px;font-size:8px;color:var(--muted);letter-spacing:1px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span>📄 index.html</span>
-          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V33.1 — 27 Jun 2026 06:00</span>
+          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V34.0 — 02 Jul 2026 18:00</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <span>⚙️ sw.js</span>
@@ -5249,17 +5249,61 @@ async function startBulkScan(mode){
     document.getElementById('bulkProgressTime').textContent = 'ETA: ' + Math.floor(remaining/60) + 'm ' + (remaining%60) + 's';
 
     // Analyse stock
-    // FIX 3 — Auto retry once on error
-    let result = await bulkAnalyseStock(symbol, capital, slPct, tgtPct);
-    if(result.error && !bulkScanStop){
-      document.getElementById('bulkCurrentStock').textContent = `⟳ Retrying ${symbol}...`;
-      await sleep(30000); // Wait 30 seconds before retry
+    // V7.3: Affordable mode uses server-side under500 profile via /api/scan?mode=under500
+    let result;
+    if(mode === 'affordable'){
+      try{
+        const res = await fetch(`${REPLIT_SERVER}/api/scan?symbol=${symbol}&capital=${capital}&mode=under500`);
+        const data = await res.json();
+        if(data && !data.error){
+          // Skip stocks above ₹500 (server already handles logic, but double-check price)
+          if(data.price > 500){ continue; }
+          // Map server response to bulk result format
+          result = {
+            symbol: data.symbol,
+            signal: data.signal,
+            confidence: data.confidence,
+            price: data.price,
+            sl: data.slPrice,
+            target: data.targetPrice,
+            qty: data.qty,
+            rsi: data.rsi,
+            volRatio: data.volRatio,
+            emaBull: data.emaBull,
+            aboveVwap: data.aboveVwap,
+            vwap: data.vwap,
+            candle: data.candle,
+            flags: data.flags || [],
+            reasons: data.reasons || [],
+            profitRs: data.profitRs,
+            rrRatio: data.rrRatio,
+            under500Mode: true,
+            sector: data.sector,
+            sectorLabel: data.sectorLabel,
+            priceChange: data.priceChange,
+            trendDirection: data.trendDirection,
+            macd: data.macd,
+            macdSignal: data.macdSignal,
+            macdBull: data.macdBull,
+            blocked: data.blocked,
+            blockReason: data.blockReason,
+            error: null,
+          };
+        } else {
+          result = { symbol, signal:'ERROR', error: data.error || 'Server error', price:0 };
+        }
+      } catch(e){
+        result = { symbol, signal:'ERROR', error: e.message, price:0 };
+      }
+    } else {
+      // FIX 3 — Auto retry once on error (normal mode)
       result = await bulkAnalyseStock(symbol, capital, slPct, tgtPct);
-      if(!result.error) console.log(`✅ ${symbol} retry succeeded!`);
-    }
-    // For affordable mode — skip stocks above ₹500
-    if(mode === 'affordable' && !result.error && result.price > 500){
-      continue; // Skip completely - don't add to table
+      if(result.error && !bulkScanStop){
+        document.getElementById('bulkCurrentStock').textContent = `⟳ Retrying ${symbol}...`;
+        await sleep(30000);
+        result = await bulkAnalyseStock(symbol, capital, slPct, tgtPct);
+        if(!result.error) console.log(`✅ ${symbol} retry succeeded!`);
+      }
     }
 
     bulkResults.push(result);
