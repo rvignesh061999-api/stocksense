@@ -8480,6 +8480,8 @@ function getTimerStocks(){
       'INOXWIND','IREDA','HBLENGINE','GRSE',
       // Others (under 500)
       'WIPRO','BIOCON','AMBUJACEM',
+      // Tier 3 (below Rs.50) — added 09 Jul 2026
+      'PCJEWELLER','RTNPOWER','SEPC','GTLINFRA',
     ];
     stocks = UNDER500_STOCKS;
   }
@@ -8625,6 +8627,9 @@ async function startTimerScan(){
   document.getElementById('timerProgressBox').style.display = 'none';
   stopWorkerTimer(); // Solution 3: clean up worker
   await releaseWakeLock();
+  // Auto-download Admin (Activity) + API logs on natural scan completion
+  try{ kibExportActivityTXT(); }catch(e){ appLog('EXPORT','AUTO-DL ACTIVITY FAILED', String(e), 'error'); }
+  try{ kibExportTXT(); }catch(e){ appLog('EXPORT','AUTO-DL API FAILED', String(e), 'error'); }
 }
 
 function stopTimerScan(){
@@ -8640,6 +8645,9 @@ function stopTimerScan(){
   appLog('TIMER','TIMER SCAN STOPPED',`Completed ${timerScanCount} scan(s)`,'warn');
   showNotification('⏹ Timer Scan stopped!');
   releaseWakeLock();
+  // Auto-download Admin (Activity) + API logs on scan stop
+  try{ kibExportActivityTXT(); }catch(e){ appLog('EXPORT','AUTO-DL ACTIVITY FAILED', String(e), 'error'); }
+  try{ kibExportTXT(); }catch(e){ appLog('EXPORT','AUTO-DL API FAILED', String(e), 'error'); }
 }
 
 function updateTimerDisplay(state, seconds, statusText){
