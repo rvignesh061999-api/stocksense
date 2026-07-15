@@ -1721,7 +1721,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="versionStamp" style="margin-top:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:6px;font-size:8px;color:var(--muted);letter-spacing:1px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span>📄 index.html</span>
-          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V34.1 — 07 Jul 2026 06:30</span>
+          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V34.2 — 09 Jul 2026 17:30</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <span>⚙️ sw.js</span>
@@ -2068,6 +2068,31 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div class="setting-row">
         <div><div class="setting-label">Max Trades Per Day</div><div class="setting-sub">Hard limit on daily trades</div></div>
         <input class="sl-pct-in" id="maxTradesIn" type="number" value="3" min="1" max="10" step="1" onchange="saveSetting('maxTrades',this.value)"/>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">TIER 3 VOLUME GATE</div>
+      <div class="setting-sub" style="margin-bottom:10px">Fix 7's volume hard-block, for the 8 Tier 3 stocks only (IDEA, RPOWER, YESBANK, SUZLON, PCJEWELLER, RTNPOWER, SEPC, GTLINFRA). Large-cap / Tier 2 stocks always keep the strict gate.</div>
+      <div id="volGateOptStrict" onclick="selectVolGateMode('strict')" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;border:1px solid var(--b2);cursor:pointer;margin-bottom:6px;transition:all 0.2s">
+        <div id="volGateDotStrict" style="width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;font-weight:700">Strict (default)</div>
+          <div style="font-size:8px;color:var(--muted)">Normal threshold — Vol &lt; 0.5x blocked (0.3x in Under-₹500 mode)</div>
+        </div>
+      </div>
+      <div id="volGateOptLoose" onclick="selectVolGateMode('loose')" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;border:1px solid var(--b2);cursor:pointer;margin-bottom:6px;transition:all 0.2s">
+        <div id="volGateDotLoose" style="width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;font-weight:700">Loosened</div>
+          <div style="font-size:8px;color:var(--muted)">Threshold lowered to Vol &lt; 0.2x — fewer blocks, still some filter</div>
+        </div>
+      </div>
+      <div id="volGateOptOff" onclick="selectVolGateMode('off')" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;border:1px solid var(--b2);cursor:pointer;transition:all 0.2s">
+        <div id="volGateDotOff" style="width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;font-weight:700">Off</div>
+          <div style="font-size:8px;color:var(--red)">Gate fully disabled — expect more signals, more noise. Resets to Strict each new session.</div>
+        </div>
       </div>
     </div>
     <div class="card">
@@ -5253,7 +5278,7 @@ async function startBulkScan(mode){
     let result;
     if(mode === 'affordable'){
       try{
-        const res = await fetch(`${REPLIT_SERVER}/api/scan?symbol=${symbol}&capital=${capital}&mode=under500`);
+        const res = await fetch(`${REPLIT_SERVER}/api/scan?symbol=${symbol}&capital=${capital}&mode=under500&volGateMode=${volGateMode}`);
         const data = await res.json();
         if(data && !data.error){
           // Skip stocks above ₹500 (server already handles logic, but double-check price)
@@ -10470,6 +10495,25 @@ const SERVER_OPTIONS = {
   B: { label: 'V7.0 — vicky6599',       url: 'https://stock-sense-server--vicky6599.replit.app/api' }
 };
 
+// V41: Tier 3 Volume Gate toggle — resets to 'strict' each new session (does NOT persist across days)
+let volGateMode = 'strict';
+function renderVolGateSelector() {
+  ['strict','loose','off'].forEach(m => {
+    const dot = document.getElementById('volGateDot' + m.charAt(0).toUpperCase() + m.slice(1));
+    const opt = document.getElementById('volGateOpt' + m.charAt(0).toUpperCase() + m.slice(1));
+    if (!dot || !opt) return;
+    const active = (m === volGateMode);
+    dot.style.background = active ? (m === 'off' ? 'var(--red)' : 'var(--green)') : 'var(--muted)';
+    opt.style.border = active ? '1px solid ' + (m === 'off' ? 'var(--red)' : 'var(--green)') : '1px solid var(--b2)';
+  });
+}
+function selectVolGateMode(mode) {
+  volGateMode = mode; // NOT saved to localStorage on purpose — defaults to strict at each app load
+  renderVolGateSelector();
+  appLog('SETTINGS','TIER3 VOL GATE CHANGED',`Mode: ${mode.toUpperCase()} — applies only to the 8 Tier 3 symbols`, mode === 'off' ? 'warning' : 'info');
+  showNotification(`Tier 3 volume gate: ${mode.toUpperCase()}`, 3000);
+}
+
 function selectServer(key) {
   // Persist choice
   save('activeServer', key);
@@ -10518,6 +10562,7 @@ function initServerSelector() {
 
 // Call on page load — must run after DOM ready
 document.addEventListener('DOMContentLoaded', initServerSelector);
+document.addEventListener('DOMContentLoaded', renderVolGateSelector); // V41: always starts at 'strict'
 
 function downloadTXT(filename, content){
   const blob = new Blob([content], {type:'text/plain'});
@@ -11515,7 +11560,7 @@ async function adminRunManualTest(){
     replit_intraday: REPLIT_SERVER+'/intraday?symbol='+sym,
     replit_vwap: REPLIT_SERVER+'/vwap?symbol='+sym,
     replit_bulk: REPLIT_SERVER+'/bulk',
-    replit_scan: REPLIT_SERVER+'/api/scan?symbol='+sym,
+    replit_scan: REPLIT_SERVER+'/api/scan?symbol='+sym+'&volGateMode='+volGateMode,
     replit_scanall: REPLIT_SERVER+'/api/scanall',
     replit_globalmarkets: REPLIT_SERVER+'/globalmarkets',
     twelvedata_series: `https://api.twelvedata.com/time_series?symbol=${sym}%3ANSE&interval=1day&outputsize=5&apikey=${TD_KEY}`,
