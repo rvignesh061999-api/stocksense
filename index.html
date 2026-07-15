@@ -1331,7 +1331,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 <div class="app">
   <!-- TOPBAR -->
   <div class="topbar">
-    <div class="logo">STOCK<span>SENSE</span><small>V33.1</small></div>
+    <div class="logo">STOCK<span>SENSE</span><small>V33.2</small></div>
     <div style="display:flex;align-items:center;gap:8px">
       <!-- V27 Fix 14 — Server status visible on ALL tabs -->
       <div id="globalServerDot" onclick="checkGlobalServer()"
@@ -1721,7 +1721,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="versionStamp" style="margin-top:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:6px;font-size:8px;color:var(--muted);letter-spacing:1px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span>📄 index.html</span>
-          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V34.2 — 09 Jul 2026 17:30</span>
+          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V34.3 — 15 Jul 2026 06:20</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <span>⚙️ sw.js</span>
@@ -2168,7 +2168,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="alertList"></div>
     </div>
 
-    <div style="text-align:center;padding:20px;font-size:9px;letter-spacing:2px;color:var(--muted2)">STOCKSENSE V33.1 — ULTIMATE TRADING SUITE 🚀</div>
+    <div style="text-align:center;padding:20px;font-size:9px;letter-spacing:2px;color:var(--muted2)">STOCKSENSE V33.2 — ULTIMATE TRADING SUITE 🚀</div>
   </div>
 
   <!-- ADMIN PAGE V30 — KIBANA STYLE -->
@@ -8759,7 +8759,7 @@ async function runTimerScanOnce(){
   const capital = parseFloat(document.getElementById('bulkCapital')?.value || 10000);
   const mood = marketMood || load('market_mood_today', null);
 
-  appLog('TIMER','SCAN START',`Scan #${timerScanCount+1} | ${stocks.length} stocks | Capital ₹${capital} | Mood: ${mood||'none'} | Engine: /api/scan (V7 server-side)`,'info');
+  appLog('TIMER','SCAN START',`Scan #${timerScanCount+1} | ${stocks.length} stocks | Capital ₹${capital} | Mood: ${mood||'none'} | Engine: /api/scan (V7 server-side) | Tier3 Vol Gate: ${volGateMode.toUpperCase()}`,'info');
   appLog('SW', 'SW STATE AT SCAN START',
     `controller:${navigator.serviceWorker?.controller ? 'ACTIVE ✅' : 'NULL ❌'} | swReg.active:${swRegistration?.active ? 'YES ✅' : 'NULL ❌'} | permission:${Notification?.permission}`,
     navigator.serviceWorker?.controller ? 'success' : 'warn'
@@ -8780,7 +8780,7 @@ async function runTimerScanOnce(){
     try{
       // V7: Call /api/scan — server computes all indicators + hard blocks
       const fetchStart = Date.now();
-      const res = await fetch(`${REPLIT_SERVER}/scan?symbol=${symbol}&capital=${capital}`);
+      const res = await fetch(`${REPLIT_SERVER}/scan?symbol=${symbol}&capital=${capital}&volGateMode=${volGateMode}`);
       const r = await res.json();
       const fetchMs = Date.now()-fetchStart;
 
@@ -8794,7 +8794,8 @@ async function runTimerScanOnce(){
 
       if(r.blocked){
         hardBlocks++;
-        appLog('TIMER',`${symbol} — BLOCKED`,`${r.blockReason} | ₹${r.price} | RSI ${r.rsi} | EMA ${r.emaBull?'Bull':'Bear'} | Vol ${r.volRatio}x | ${fetchMs}ms`,'warn');
+        const gateTag = (TIER3_SYMBOLS.includes(symbol) && volGateMode !== 'strict') ? ` | GATE:${volGateMode.toUpperCase()}` : '';
+        appLog('TIMER',`${symbol} — BLOCKED`,`${r.blockReason} | ₹${r.price} | RSI ${r.rsi} | EMA ${r.emaBull?'Bull':'Bear'} | Vol ${r.volRatio}x${gateTag} | ${fetchMs}ms`,'warn');
       }
 
       // Volume trend from previous scan
@@ -8841,8 +8842,9 @@ async function runTimerScanOnce(){
           appLog('SW', `SCAN_PROGRESS → ${i+1}/${stocks.length}`, `BUY:${buyCount} SHORT:${shortCount} | Sending to SW...`, 'info');
           swPost({ type: 'SCAN_PROGRESS', scanned: i + 1, total: stocks.length, buys: buyCount, shorts: shortCount, scanNum: timerScanCount + 1 });
         }
+        const gateTagSig = (TIER3_SYMBOLS.includes(symbol) && volGateMode !== 'strict') ? ` | GATE:${volGateMode.toUpperCase()}` : '';
         appLog('TIMER',`${symbol} — ${signal} ${confidence}%`,
-          `₹${r.price} | RSI ${r.rsi} | EMA ${r.emaBull?'Bull':'Bear'} | Vol ${r.volRatio}x (${volTrend}) | ${r.candle} | ${r.priceChange>=0?'+':''}${r.priceChange}%${r.isExtended?' | ⚠️EXTENDED':''}${r.isPennyStock?' | ⚠️PENNY':''}${r.highRiskSL?' | 🔴HIGH RISK SL':''} | ${fetchMs}ms`,
+          `₹${r.price} | RSI ${r.rsi} | EMA ${r.emaBull?'Bull':'Bear'} | Vol ${r.volRatio}x (${volTrend}) | ${r.candle} | ${r.priceChange>=0?'+':''}${r.priceChange}%${r.isExtended?' | ⚠️EXTENDED':''}${r.isPennyStock?' | ⚠️PENNY':''}${r.highRiskSL?' | 🔴HIGH RISK SL':''}${gateTagSig} | ${fetchMs}ms`,
           signal==='BUY'?'success':'warn');
       }
 
@@ -10496,6 +10498,7 @@ const SERVER_OPTIONS = {
 };
 
 // V41: Tier 3 Volume Gate toggle — resets to 'strict' each new session (does NOT persist across days)
+const TIER3_SYMBOLS = ['IDEA','RPOWER','YESBANK','SUZLON','PCJEWELLER','RTNPOWER','SEPC','GTLINFRA'];
 let volGateMode = 'strict';
 function renderVolGateSelector() {
   ['strict','loose','off'].forEach(m => {
