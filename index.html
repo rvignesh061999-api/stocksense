@@ -1749,7 +1749,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="versionStamp" style="margin-top:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:6px;font-size:8px;color:var(--muted);letter-spacing:1px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span>📄 index.html</span>
-          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V34.6 — 21 Jul 2026 23:10</span>
+          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V34.7 — 21 Jul 2026 23:25</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <span>⚙️ sw.js</span>
@@ -5332,8 +5332,7 @@ async function startBulkScan(mode){
     if(mode === 'affordable'){
       try{
         const res = await fetch(`${REPLIT_SERVER}/scan?symbol=${symbol}&capital=${capital}&mode=under500&volGateMode=${volGateMode}&buyBlockMode=${buyBlockMode}`);
-        let data = await res.json();
-        data = applyTier3GateOverrides(symbol, data); // V41.1: fallback fix if server is stale
+        const data = await res.json();
         if(data && !data.error){
           // Skip stocks above ₹500 (server already handles logic, but double-check price)
           if(data.price > 500){ continue; }
@@ -8835,8 +8834,7 @@ async function runTimerScanOnce(){
       // V7: Call /api/scan — server computes all indicators + hard blocks
       const fetchStart = Date.now();
       const res = await fetch(`${REPLIT_SERVER}/scan?symbol=${symbol}&capital=${capital}&volGateMode=${volGateMode}&buyBlockMode=${buyBlockMode}`);
-      let r = await res.json();
-      r = applyTier3GateOverrides(symbol, r); // V41.1: fallback fix if server is stale
+      const r = await res.json();
       const fetchMs = Date.now()-fetchStart;
 
       if(r.signal === 'ERROR' || !r.price){
@@ -10575,91 +10573,6 @@ function renderVolGateSelector() {
     }
   });
 }
-// V41.1: Client-side Tier 3 gate override — recomputes signal locally using raw indicator
-// fields already present in every /api/scan response (rsi, emaBull, volRatio, candleSignal,
-// trendDirection, macd, etc). This makes volGateMode/buyBlockMode work correctly even if the
-// deployed Replit server is stuck on an older version that doesn't know these params exist yet.
-// Only the 8 Tier 3 symbols are touched — everything else passes through completely unchanged.
-const TIER3_SYMBOLS_CLIENT = ['IDEA','RPOWER','YESBANK','SUZLON','PCJEWELLER','RTNPOWER','SEPC','GTLINFRA'];
-function applyTier3GateOverrides(symbol, data) {
-  if (!data || !TIER3_SYMBOLS_CLIENT.includes(symbol)) return data;
-  if (volGateMode === 'strict' && buyBlockMode === 'strict') return data; // server default already matches
-  if (typeof data.rsi !== 'number' || typeof data.price !== 'number') return data; // can't safely recompute
-
-  const P = { rsiBlockBuy: 45, rsiOverbought: 80, volHardBlock: 0.3, slPct: 1.0, tgtPct: 2.5 };
-  const rsi = data.rsi, emaBull = !!data.emaBull, volRatio = data.volRatio || 0;
-  const priceChange = data.priceChange || 0, price = data.price, vwap = data.vwap || price;
-  const candleSignal = data.candleSignal || 'NEUTRAL', candleStrength = data.candleStrength || 'Weak';
-  const trendDirection = data.trendDirection || 'FLAT', belowSMA10 = !!data.belowSMA10;
-  const macd = (typeof data.macd === 'number') ? data.macd : null;
-  const macdBull = !!data.macdBull, macdCrossUp = !!data.macdCrossUp, macdCrossDn = !!data.macdCrossDn;
-
-  // Recompute the raw bull/bear score — mirrors server computeSignal() scoring exactly
-  let bull = 0, bear = 0;
-  if (emaBull) bull++; else bear++;
-  if (rsi > P.rsiBlockBuy && rsi < P.rsiOverbought) bull++;
-  if (rsi < 30) bull++;
-  if (rsi > 70) bear++;
-  if (volRatio >= 1.3 && priceChange > 0) bull++;
-  if (volRatio >= 1.3 && priceChange < 0) bear++;
-  if (priceChange > 0) bull++; else bear++;
-  if (price > vwap) bull++; else bear++;
-  if (candleSignal === 'BUY') bull += candleStrength === 'Strong' ? 2 : 1;
-  if (candleSignal === 'SELL') bear += candleStrength === 'Strong' ? 2 : 1;
-  if (trendDirection === 'UP' && !belowSMA10) bull++;
-  if (trendDirection === 'DOWN' && belowSMA10) bear++;
-  if (macd !== null) { if (macdBull) bull += macdCrossUp ? 2 : 1; else bear += macdCrossDn ? 2 : 1; }
-
-  let signal, confidence;
-  if (bull >= 5) { signal = 'BUY'; confidence = Math.min(95, 55 + bull * 4); }
-  else if (bear >= 5) { signal = 'SHORT'; confidence = Math.min(95, 55 + bear * 4); }
-  else { signal = 'AVOID'; confidence = 40; }
-
-  let blocked = false, blockReason = null;
-  const reasons = Array.isArray(data.reasons) ? data.reasons.slice() : [];
-
-  // Volume gate override
-  let effVolBlock = P.volHardBlock;
-  if (volGateMode !== 'strict') effVolBlock = volGateMode === 'off' ? -1 : 0.2;
-  if (volRatio < effVolBlock) {
-    blocked = true; blockReason = 'VOL_HARD_BLOCK'; signal = 'AVOID'; confidence = 40;
-    reasons.push(`🚫 [CLIENT] Volume ${volRatio.toFixed(2)}x < ${effVolBlock.toFixed(1)}x`);
-  }
-
-  // BUY-only block overrides (Fix 6 / Fix 8 / Fix 11 / Fix 2)
-  if (!blocked && signal === 'BUY') {
-    const buyOff = buyBlockMode === 'off', buyLoose = buyBlockMode === 'loose';
-    if (!emaBull && !buyOff) {
-      if (buyLoose) reasons.push('⚠️ [CLIENT] EMA Bearish on BUY — flagged, not blocked');
-      else { blocked = true; blockReason = 'EMA_BEARISH'; signal = 'AVOID'; confidence = 40; }
-    }
-    const rsiThresh = buyLoose ? 35 : P.rsiBlockBuy;
-    if (!blocked && rsi < rsiThresh && !buyOff) {
-      blocked = true; blockReason = 'RSI_BELOW_50'; signal = 'AVOID'; confidence = 40;
-    }
-    const bearishFalling = candleSignal === 'SELL' && priceChange < 0;
-    if (!blocked && bearishFalling && !buyOff) {
-      if (buyLoose) reasons.push('⚠️ [CLIENT] Bearish Candle + Falling — flagged, not blocked');
-      else { blocked = true; blockReason = 'BEARISH_CANDLE_PRICE_FALLING'; signal = 'AVOID'; confidence = 40; }
-    }
-    const confThresh = buyLoose ? 60 : 85;
-    if (!blocked && price < 50 && confidence < confThresh && !buyOff) {
-      blocked = true; blockReason = 'PENNY_LOW_CONF'; signal = 'AVOID'; confidence = 45;
-    }
-  }
-
-  reasons.push(`ℹ️ [CLIENT OVERRIDE] volGate=${volGateMode} buyBlock=${buyBlockMode} (recomputed in-browser — server may be stale)`);
-
-  const out = Object.assign({}, data, { signal, confidence, blocked, blockReason, reasons });
-  if (signal === 'BUY' || signal === 'SHORT') {
-    const slPrice = signal === 'SHORT' ? price * (1 + P.slPct / 100) : price * (1 - P.slPct / 100);
-    const tgtPrice = signal === 'SHORT' ? price * (1 - P.tgtPct / 100) : price * (1 + P.tgtPct / 100);
-    out.slPrice = parseFloat(slPrice.toFixed(2));
-    out.tgtPrice = parseFloat(tgtPrice.toFixed(2));
-  }
-  return out;
-}
-
 function selectVolGateMode(mode) {
   volGateMode = mode; // NOT saved to localStorage on purpose — defaults to strict at each app load
   renderVolGateSelector();
