@@ -1749,7 +1749,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="versionStamp" style="margin-top:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:6px;font-size:8px;color:var(--muted);letter-spacing:1px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span>📄 index.html</span>
-          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V34.7 — 21 Jul 2026 23:25</span>
+          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V34.8 — 24 Jul 2026 03:15</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <span>⚙️ sw.js</span>
@@ -8868,6 +8868,20 @@ async function runTimerScanOnce(){
       if((r.volRatio < 0.9) && !r.blocked && r.reasons){
         if(volImproving) r.reasons.push(`📈 Vol trend: ${volTrend} — improving, watch closely`);
         else if(prevScanVolRatio) r.reasons.push(`⚠️ Vol trend: ${volTrend}`);
+      }
+
+      // V41.2: Low-conviction advisory flag — 24 Jul 2026
+      // Day 33's two wrong SHORTs (YESBANK, RPOWER) both showed RSI within 5 points of 50 (near-neutral,
+      // not clearly bearish) AND flat/declining volume vs the prior scan — while the three correct calls
+      // that same day (SEPC, GTLINFRA, SUZLON) had clearly bearish RSI (34-38) and rising volume. This is
+      // advisory only — does NOT block the signal, since it's based on 2 confirmed cases so far, not
+      // enough to justify a hard block. Just surfaces the warning live instead of only visible in hindsight.
+      if((r.signal === 'BUY' || r.signal === 'SHORT') && !r.blocked && TIER3_SYMBOLS.includes(symbol)){
+        const rsiNearNeutral = Math.abs(r.rsi - 50) <= 5;
+        const volNotRising = prevScanVolRatio !== null && !volImproving;
+        if(rsiNearNeutral && volNotRising){
+          r.reasons.push(`⚠️ LOW CONVICTION: RSI ${r.rsi} near-neutral + volume not rising (${volTrend}) — matches Day 33's 2 wrong calls`);
+        }
       }
 
       // Market mood adjustment
