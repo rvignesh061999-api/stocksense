@@ -1521,6 +1521,20 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div style="font-size:8px;color:var(--muted);margin-top:6px">Controls Fix 6 / Fix 8 / Fix 11 / Fix 2 (BUY-only hard blocks) — only affects the 8 Tier 3 symbols. SHORT signals are never affected by this gate.</div>
     </div>
 
+    <!-- TIER 3 LEVEL TARGET — persistent, applies to all scan buttons below -->
+    <div class="card" style="padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="card-title" style="margin:0">TIER 3 LEVEL TARGET</div>
+        <div style="font-size:8px;color:var(--muted)">resets to Off each session</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <div id="levelBadgeOff" onclick="selectLevelMode('off')" style="flex:1;text-align:center;padding:8px 4px;border-radius:6px;border:1px solid var(--b2);cursor:pointer;font-size:9px;font-weight:700;transition:all 0.2s">OFF</div>
+        <div id="levelBadgeStatic" onclick="selectLevelMode('static')" style="flex:1;text-align:center;padding:8px 4px;border-radius:6px;border:1px solid var(--b2);cursor:pointer;font-size:9px;font-weight:700;transition:all 0.2s">STATIC</div>
+        <div id="levelBadgeAuto" onclick="selectLevelMode('auto')" style="flex:1;text-align:center;padding:8px 4px;border-radius:6px;border:1px solid var(--b2);cursor:pointer;font-size:9px;font-weight:700;transition:all 0.2s">AUTO</div>
+      </div>
+      <div style="font-size:8px;color:var(--muted);margin-top:6px">OFF = flat %-based target (default). STATIC = manually-mapped support/resistance levels from 27 Jul 2026 charts (goes stale — re-map periodically). AUTO = server detects swing highs/lows from ~40-day price history each scan (self-updating, only affects the 8 Tier 3 symbols). Target only changes if the level is FARTHER than the flat % target — never makes it worse.</div>
+    </div>
+
     <!-- THREE SCAN BUTTONS -->
     <div class="bulk-btn-grid">
       <button class="bulk-btn favs" id="btnFavs" onclick="startBulkScan('favs')">
@@ -1749,7 +1763,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="versionStamp" style="margin-top:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:6px;font-size:8px;color:var(--muted);letter-spacing:1px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span>📄 index.html</span>
-          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V34.8 — 24 Jul 2026 03:15</span>
+          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V34.9 — 27 Jul 2026 02:30</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <span>⚙️ sw.js</span>
@@ -2145,6 +2159,31 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
         <div style="flex:1;min-width:0">
           <div style="font-size:10px;font-weight:700">Off</div>
           <div style="font-size:8px;color:var(--red)">All 4 BUY-only blocks skipped entirely — expect more BUY signals, more noise. Resets to Strict each new session.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">TIER 3 LEVEL TARGET</div>
+      <div class="setting-sub" style="margin-bottom:10px">Use actual support/resistance levels instead of a flat % target for the 8 Tier 3 symbols. Target only changes if the level is farther than the flat-% target — never makes it worse.</div>
+      <div id="levelOptOff" onclick="selectLevelMode('off')" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;border:1px solid var(--b2);cursor:pointer;margin-bottom:6px;transition:all 0.2s">
+        <div id="levelDotOff" style="width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;font-weight:700">Off (default)</div>
+          <div style="font-size:8px;color:var(--muted)">Flat %-based target/SL per stock (TIER3_TARGETS), unchanged</div>
+        </div>
+      </div>
+      <div id="levelOptStatic" onclick="selectLevelMode('static')" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;border:1px solid var(--b2);cursor:pointer;margin-bottom:6px;transition:all 0.2s">
+        <div id="levelDotStatic" style="width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;font-weight:700">Static</div>
+          <div style="font-size:8px;color:var(--muted)">Manually-mapped levels from 27 Jul 2026 charts — fast, but goes stale over time, re-map periodically</div>
+        </div>
+      </div>
+      <div id="levelOptAuto" onclick="selectLevelMode('auto')" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;border:1px solid var(--b2);cursor:pointer;transition:all 0.2s">
+        <div id="levelDotAuto" style="width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;font-weight:700">Auto</div>
+          <div style="font-size:8px;color:var(--muted)">Server detects swing highs/lows from ~40-day price history each scan — self-updating, no manual refresh needed</div>
         </div>
       </div>
     </div>
@@ -5331,7 +5370,7 @@ async function startBulkScan(mode){
     let result;
     if(mode === 'affordable'){
       try{
-        const res = await fetch(`${REPLIT_SERVER}/scan?symbol=${symbol}&capital=${capital}&mode=under500&volGateMode=${volGateMode}&buyBlockMode=${buyBlockMode}`);
+        const res = await fetch(`${REPLIT_SERVER}/scan?symbol=${symbol}&capital=${capital}&mode=under500&volGateMode=${volGateMode}&buyBlockMode=${buyBlockMode}&levelMode=${levelMode}`);
         const data = await res.json();
         if(data && !data.error){
           // Skip stocks above ₹500 (server already handles logic, but double-check price)
@@ -8833,7 +8872,7 @@ async function runTimerScanOnce(){
     try{
       // V7: Call /api/scan — server computes all indicators + hard blocks
       const fetchStart = Date.now();
-      const res = await fetch(`${REPLIT_SERVER}/scan?symbol=${symbol}&capital=${capital}&volGateMode=${volGateMode}&buyBlockMode=${buyBlockMode}`);
+      const res = await fetch(`${REPLIT_SERVER}/scan?symbol=${symbol}&capital=${capital}&volGateMode=${volGateMode}&buyBlockMode=${buyBlockMode}&levelMode=${levelMode}`);
       const r = await res.json();
       const fetchMs = Date.now()-fetchStart;
 
@@ -10622,6 +10661,34 @@ function selectBuyBlockMode(mode) {
   showNotification(`Tier 3 BUY-block gate: ${mode.toUpperCase()}`, 3000);
 }
 
+// V41.3: Tier 3 Level-Target toggle — Off (flat %) / Static (manually-mapped levels) / Auto
+// (server detects swing highs/lows from price history). Resets to 'off' each session.
+let levelMode = 'off';
+function renderLevelModeSelector() {
+  ['off','static','auto'].forEach(m => {
+    const badge = document.getElementById('levelBadge' + m.charAt(0).toUpperCase() + m.slice(1));
+    const dot = document.getElementById('levelDot' + m.charAt(0).toUpperCase() + m.slice(1));
+    const opt = document.getElementById('levelOpt' + m.charAt(0).toUpperCase() + m.slice(1));
+    const active = (m === levelMode);
+    const activeColor = m === 'off' ? 'var(--muted)' : 'var(--green)';
+    if (badge) {
+      badge.style.background = active ? activeColor : 'transparent';
+      badge.style.color = active ? '#000' : 'var(--muted)';
+      badge.style.border = '1px solid ' + (active ? activeColor : 'var(--b2)');
+    }
+    if (dot && opt) {
+      dot.style.background = active ? activeColor : 'var(--muted)';
+      opt.style.border = active ? '1px solid ' + activeColor : '1px solid var(--b2)';
+    }
+  });
+}
+function selectLevelMode(mode) {
+  levelMode = mode; // NOT saved to localStorage on purpose — defaults to off at each app load
+  renderLevelModeSelector();
+  appLog('SETTINGS','TIER3 LEVEL TARGET CHANGED',`Mode: ${mode.toUpperCase()} — support/resistance targets for the 8 Tier 3 symbols`, 'info');
+  showNotification(`Tier 3 level target: ${mode.toUpperCase()}`, 3000);
+}
+
 function selectServer(key) {
   // Persist choice
   save('activeServer', key);
@@ -10672,6 +10739,7 @@ function initServerSelector() {
 document.addEventListener('DOMContentLoaded', initServerSelector);
 document.addEventListener('DOMContentLoaded', renderVolGateSelector); // V41: always starts at 'strict'
 document.addEventListener('DOMContentLoaded', renderBuyBlockSelector); // V41: always starts at 'strict'
+document.addEventListener('DOMContentLoaded', renderLevelModeSelector); // V41.3: always starts at 'off'
 
 function downloadTXT(filename, content){
   const blob = new Blob([content], {type:'text/plain'});
@@ -11669,7 +11737,7 @@ async function adminRunManualTest(){
     replit_intraday: REPLIT_SERVER+'/intraday?symbol='+sym,
     replit_vwap: REPLIT_SERVER+'/vwap?symbol='+sym,
     replit_bulk: REPLIT_SERVER+'/bulk',
-    replit_scan: REPLIT_SERVER+'/scan?symbol='+sym+'&volGateMode='+volGateMode+'&buyBlockMode='+buyBlockMode,
+    replit_scan: REPLIT_SERVER+'/scan?symbol='+sym+'&volGateMode='+volGateMode+'&buyBlockMode='+buyBlockMode+'&levelMode='+levelMode,
     replit_scanall: REPLIT_SERVER+'/scanall',
     replit_globalmarkets: REPLIT_SERVER+'/globalmarkets',
     twelvedata_series: `https://api.twelvedata.com/time_series?symbol=${sym}%3ANSE&interval=1day&outputsize=5&apikey=${TD_KEY}`,
