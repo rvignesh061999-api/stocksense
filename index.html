@@ -1911,33 +1911,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="checklistResult" style="margin-top:12px"></div>
     </div>
 
-    <!-- MARKET MOOD -->
-    <div class="card">
-      <div class="card-title">🌡️ MARKET MOOD TODAY</div>
-      <div id="marketMood">
-        <!-- AUTO DETECT BUTTON -->
-        <button id="moodAutoBtn" onclick="autoFetchMarketMood(false)" style="width:100%;background:rgba(61,155,255,0.08);border:1px solid rgba(61,155,255,0.2);border-radius:8px;color:var(--blue);font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1px;padding:8px;cursor:pointer;margin-bottom:10px">
-          🔄 AUTO DETECT MOOD FROM NIFTY
-        </button>
-        <div id="moodNiftyInfo" style="display:none;font-size:9px;color:var(--muted);text-align:center;margin-bottom:8px;padding:4px;background:var(--s2);border-radius:6px"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-          <div class="mood-btn" onclick="setMood('bull')" id="mood-bull">
-            <div style="font-size:20px;margin-bottom:4px">📈</div>
-            <div style="font-size:9px;letter-spacing:1px">BULLISH</div>
-          </div>
-          <div class="mood-btn" onclick="setMood('neutral')" id="mood-neutral">
-            <div style="font-size:20px;margin-bottom:4px">➡️</div>
-            <div style="font-size:9px;letter-spacing:1px">NEUTRAL</div>
-          </div>
-          <div class="mood-btn" onclick="setMood('bear')" id="mood-bear">
-            <div style="font-size:20px;margin-bottom:4px">📉</div>
-            <div style="font-size:9px;letter-spacing:1px">BEARISH</div>
-          </div>
-        </div>
-        <div style="font-size:8px;color:var(--muted);text-align:center;margin-top:6px">Auto-refreshes every 15 min during market hours</div>
-        <div id="moodAdvice" style="margin-top:10px;font-size:10px;color:var(--muted);line-height:1.7;padding:8px;background:var(--s2);border-radius:6px;display:none"></div>
-      </div>
-    </div>
+    <!-- MARKET MOOD moved to Admin page — see page-admin -->
 
     <!-- ADD TRADE -->
     <div class="card">
@@ -2265,6 +2239,50 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 
   <!-- ADMIN PAGE V30 — KIBANA STYLE -->
   <div class="page" id="page-admin">
+
+    <!-- WAKE SERVER (ADMIN) — third wake button, kept in sync with Analyse
+         and Timer Scan pages via the shared syncWakeUI() helper -->
+    <div class="server-status-card">
+      <div class="server-status-row">
+        <div class="server-status-title">🖥️ SERVER STATUS</div>
+        <div class="server-indicator" id="adminServerIndicator">
+          <div class="server-dot checking" id="adminServerDot"></div>
+          <span id="adminServerText">Checking...</span>
+        </div>
+      </div>
+      <button class="wake-btn checking" id="adminWakeBtn" onclick="wakeServer()">
+        ⚡ WAKE UP SERVER
+      </button>
+    </div>
+
+    <!-- MARKET MOOD (moved here from Journal page) -->
+    <div class="card">
+      <div class="card-title">🌡️ MARKET MOOD TODAY</div>
+      <div id="marketMood">
+        <!-- AUTO DETECT BUTTON -->
+        <button id="moodAutoBtn" onclick="autoFetchMarketMood(false)" style="width:100%;background:rgba(61,155,255,0.08);border:1px solid rgba(61,155,255,0.2);border-radius:8px;color:var(--blue);font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1px;padding:8px;cursor:pointer;margin-bottom:10px">
+          🔄 AUTO DETECT MOOD FROM NIFTY
+        </button>
+        <div id="moodNiftyInfo" style="display:none;font-size:9px;color:var(--muted);text-align:center;margin-bottom:8px;padding:4px;background:var(--s2);border-radius:6px"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div class="mood-btn" onclick="setMood('bull')" id="mood-bull">
+            <div style="font-size:20px;margin-bottom:4px">📈</div>
+            <div style="font-size:9px;letter-spacing:1px">BULLISH</div>
+          </div>
+          <div class="mood-btn" onclick="setMood('neutral')" id="mood-neutral">
+            <div style="font-size:20px;margin-bottom:4px">➡️</div>
+            <div style="font-size:9px;letter-spacing:1px">NEUTRAL</div>
+          </div>
+          <div class="mood-btn" onclick="setMood('bear')" id="mood-bear">
+            <div style="font-size:20px;margin-bottom:4px">📉</div>
+            <div style="font-size:9px;letter-spacing:1px">BEARISH</div>
+          </div>
+        </div>
+        <div style="font-size:8px;color:var(--muted);text-align:center;margin-top:6px">Auto-refreshes every 15 min during market hours</div>
+        <div id="moodAdvice" style="margin-top:10px;font-size:10px;color:var(--muted);line-height:1.7;padding:8px;background:var(--s2);border-radius:6px;display:none"></div>
+      </div>
+    </div>
+
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div style="font-size:9px;letter-spacing:3px;color:var(--muted)">🛠️ KIBANA API MONITOR</div>
       <div style="display:flex;gap:6px">
@@ -7057,15 +7075,48 @@ let serverOnline = false;
 let serverCheckInterval = null;
 let serverWakeAttempts = 0;
 
+// Every wake-server button set across the app (Analyse, Timer Scan, Admin).
+// Keeping this as one list means adding/removing a wake button anywhere
+// only requires editing this array — the sync logic below updates all of them.
+const WAKE_UI_SETS = [
+  { dot: 'serverDot',       text: 'serverStatusText',      btn: 'wakeServerBtn' },
+  { dot: 'timerServerDot',  text: 'timerServerText',       btn: 'timerWakeBtn' },
+  { dot: 'adminServerDot',  text: 'adminServerText',       btn: 'adminWakeBtn' },
+];
+
+function syncWakeUI(state, attemptMsg){
+  WAKE_UI_SETS.forEach(set => {
+    const dot = document.getElementById(set.dot);
+    const text = document.getElementById(set.text);
+    const btn = document.getElementById(set.btn);
+    if(dot) dot.className = 'server-dot ' + (state === 'online' ? 'online' : state === 'checking' ? 'checking' : 'offline');
+    if(text) text.textContent = state === 'online' ? 'Online ✅' : state === 'checking' ? 'Checking...' : 'Offline / Sleeping 😴';
+    if(btn){
+      if(state === 'online'){
+        btn.className = 'wake-btn awake';
+        btn.innerHTML = '✅ Server Online';
+        btn.disabled = true;
+      } else if(state === 'checking'){
+        btn.className = 'wake-btn checking';
+        btn.innerHTML = attemptMsg || '⏳ Waking up... please wait';
+        btn.disabled = true;
+      } else {
+        btn.className = 'wake-btn sleeping';
+        btn.innerHTML = '⚡ TAP TO WAKE UP SERVER';
+        btn.disabled = false;
+      }
+    }
+  });
+  // Timer Scan page has its own "start" button that also needs enabling on success
+  const timerStart = document.getElementById('timerStartBtn');
+  if(timerStart) timerStart.disabled = (state !== 'online');
+}
+
 async function checkServerStatus(showNotif = false){
-  const dot = document.getElementById('serverDot');
-  const text = document.getElementById('serverStatusText');
-  const btn = document.getElementById('wakeServerBtn');
   const details = document.getElementById('serverDetails');
   const lockedMsg = document.getElementById('scanLockedMsg');
 
-  if(dot) { dot.className = 'server-dot checking'; }
-  if(text) text.textContent = 'Checking...';
+  syncWakeUI('checking');
 
   try{
     const res = await fetch(`${REPLIT_SERVER}/status`, {signal: AbortSignal.timeout(8000)});
@@ -7075,14 +7126,8 @@ async function checkServerStatus(showNotif = false){
       serverOnline = true;
       serverWakeAttempts = 0;
 
-      // Update UI
-      if(dot) dot.className = 'server-dot online';
-      if(text) text.textContent = 'Online ✅';
-      if(btn){
-        btn.className = 'wake-btn awake';
-        btn.textContent = '✅ Server Online — Ready to Scan!';
-        btn.disabled = true;
-      }
+      // Update UI across all three wake panels (Analyse, Timer Scan, Admin)
+      syncWakeUI('online');
       if(details) details.innerHTML = `
         Cached: <strong style="color:var(--green)">${data.cachedStocks}/${data.totalStocks} stocks</strong> |
         Updated: <strong>${new Date(data.lastUpdate).toLocaleTimeString('en-IN')}</strong> |
@@ -7104,13 +7149,7 @@ async function checkServerStatus(showNotif = false){
     // Server offline or sleeping
     serverOnline = false;
 
-    if(dot) dot.className = 'server-dot offline';
-    if(text) text.textContent = 'Offline / Sleeping 😴';
-    if(btn){
-      btn.className = 'wake-btn sleeping';
-      btn.innerHTML = '⚡ TAP TO WAKE UP SERVER';
-      btn.disabled = false;
-    }
+    syncWakeUI('offline');
     if(details) details.innerHTML = `<span style="color:var(--red)">Server not responding. Tap WAKE UP to start it!</span>`;
     if(lockedMsg) lockedMsg.style.display = 'block';
 
@@ -7132,18 +7171,12 @@ function enableScanButtons(enabled){
   });
 }
 
+// Single unified wake function — called by ALL THREE wake buttons
+// (Analyse page, Timer Scan page, Admin page). Whichever button is tapped,
+// all three panels update together via syncWakeUI(), so they never drift
+// out of sync with each other.
 async function wakeServer(){
-  const btn = document.getElementById('wakeServerBtn');
-  const dot = document.getElementById('serverDot');
-  const text = document.getElementById('serverStatusText');
-
-  if(btn){
-    btn.className = 'wake-btn checking';
-    btn.innerHTML = '⏳ Waking up server... please wait';
-    btn.disabled = true;
-  }
-  if(dot) dot.className = 'server-dot checking';
-  if(text) text.textContent = 'Waking up...';
+  syncWakeUI('checking', '⏳ Waking up server... please wait');
 
   serverWakeAttempts++;
   appLog('SERVER','WAKE SERVER',`Attempt #${serverWakeAttempts} | URL: ${REPLIT_SERVER}/status`,'info');
@@ -7162,19 +7195,23 @@ async function wakeServer(){
     }
     appLog('SERVER',`WAKE ATTEMPT ${i}/4 FAILED`,`No response after ${ms}ms | ${i<4?'waiting 15s...':'giving up'}`,'warn');
     if(i < 4){
-      if(btn) btn.innerHTML = `⏳ Attempt ${i}/4 — waiting 15 seconds...`;
+      syncWakeUI('checking', `⏳ Attempt ${i}/4 — waiting 15 seconds...`);
       await sleep(15000);
     }
   }
 
   // Still failed
   appLog('SERVER','WAKE FAILED',`All 4 attempts failed | Server URL: ${REPLIT_SERVER} | Check Replit dashboard`,'error');
-  if(btn){
-    btn.className = 'wake-btn sleeping';
-    btn.innerHTML = '⚡ TAP TO WAKE UP SERVER';
-    btn.disabled = false;
-  }
+  syncWakeUI('offline');
   showNotification('⚠️ Server taking long to wake. Try again in 1 minute!', 6000);
+}
+
+// Kept as an alias for any legacy call sites (e.g. auto-start at 10:00 AM) —
+// now just calls the one shared wakeServer() so behaviour is identical
+// everywhere instead of running a separate, divergent implementation.
+async function wakeServerForTimer(){
+  await wakeServer();
+  return serverOnline;
 }
 
 // Auto check server on page load + every 2 minutes
@@ -8536,40 +8573,6 @@ async function releaseWakeLock() {
 }
 
 // Wake lock re-acquisition on foreground handled in the single visibilitychange listener above
-
-async function wakeServerForTimer(){
-  const btn = document.getElementById('timerWakeBtn');
-  const dot = document.getElementById('timerServerDot');
-  const text = document.getElementById('timerServerText');
-  appLog('SERVER','WAKE SERVER TRIGGERED',`Attempting to wake Replit server`,'info');
-  if(btn){ btn.innerHTML = '⏳ Waking up...'; btn.disabled = true; }
-  if(dot) dot.className = 'server-dot checking';
-
-  for(let i=1; i<=3; i++){
-    try{
-      const res = await fetch(`${REPLIT_SERVER}/status`);
-      const data = await res.json();
-      if(data.status === 'running'){
-        appLog('SERVER','SERVER ONLINE',`Version:${data.version||'?'} | Stocks:${data.totalStocks||'?'} | Attempt:${i}`,'success');
-        if(dot) dot.className = 'server-dot online';
-        if(text) text.textContent = 'Online ✅';
-        if(btn){ btn.innerHTML = '✅ Server Online'; btn.disabled = true; }
-        document.getElementById('timerStartBtn').disabled = false;
-        showNotification('✅ Server ready for Timer Scan!');
-        return true;
-      }
-    } catch(e){
-      appLog('SERVER',`WAKE ATTEMPT ${i}/3 FAILED`,e.message,'warn');
-      if(btn) btn.innerHTML = `⏳ Attempt ${i}/3...`;
-      await sleep(15000);
-    }
-  }
-  appLog('SERVER','SERVER OFFLINE','All 3 wake attempts failed','error');
-  if(dot) dot.className = 'server-dot offline';
-  if(text) text.textContent = 'Offline 😴';
-  if(btn){ btn.innerHTML = '⚡ WAKE UP SERVER'; btn.disabled = false; }
-  return false;
-}
 
 function getTimerStocks(){
   const mode = document.getElementById('timerStockMode')?.value || 'all';
