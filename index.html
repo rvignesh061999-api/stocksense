@@ -1331,7 +1331,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 <div class="app">
   <!-- TOPBAR -->
   <div class="topbar">
-    <div class="logo">STOCK<span>SENSE</span><small>V33.2</small></div>
+    <div class="logo">STOCK<span>SENSE</span></div>
     <div style="display:flex;align-items:center;gap:8px">
       <!-- V27 Fix 14 — Server status visible on ALL tabs -->
       <div id="globalServerDot" onclick="checkGlobalServer()"
@@ -1759,21 +1759,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="wakeLockBadge" style="font-size:8px;color:var(--muted);text-align:center;margin-top:6px;padding:4px;border-radius:4px">
         🔓 Wake Lock: idle — activates when scan starts
       </div>
-      <!-- VERSION STAMP — update timestamps when uploading new files to GitHub -->
-      <div id="versionStamp" style="margin-top:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:6px;font-size:8px;color:var(--muted);letter-spacing:1px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span>📄 index.html</span>
-          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V34.9 — 27 Jul 2026 02:30</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
-          <span>⚙️ sw.js</span>
-          <span style="color:var(--green);font-weight:700" id="versionSwTag">v2.1 — 26 Jun 2026 11:50</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
-          <span>🖥️ server</span>
-          <span style="color:var(--yellow);font-weight:700" id="versionServerTag">checking...</span>
-        </div>
-      </div>
+      <!-- VERSION STAMP moved to Admin page — see page-admin -->
     </div>
 
     <!-- TIMER CLOCK -->
@@ -2234,7 +2220,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="alertList"></div>
     </div>
 
-    <div style="text-align:center;padding:20px;font-size:9px;letter-spacing:2px;color:var(--muted2)">STOCKSENSE V33.2 — ULTIMATE TRADING SUITE 🚀</div>
+    <div style="text-align:center;padding:20px;font-size:9px;letter-spacing:2px;color:var(--muted2)">STOCKSENSE — ULTIMATE TRADING SUITE 🚀</div>
   </div>
 
   <!-- ADMIN PAGE V30 — KIBANA STYLE -->
@@ -2253,6 +2239,21 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <button class="wake-btn checking" id="adminWakeBtn" onclick="wakeServer()">
         ⚡ WAKE UP SERVER
       </button>
+      <!-- VERSION STAMP — update timestamps when uploading new files to GitHub -->
+      <div id="versionStamp" style="margin-top:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:6px;font-size:8px;color:var(--muted);letter-spacing:1px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span>📄 index.html</span>
+          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V34.9 — 27 Jul 2026 02:30</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+          <span>⚙️ sw.js</span>
+          <span style="color:var(--green);font-weight:700" id="versionSwTag">v2.1 — 26 Jun 2026 11:50</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+          <span>🖥️ server</span>
+          <span style="color:var(--yellow);font-weight:700" id="versionServerTag">checking...</span>
+        </div>
+      </div>
     </div>
 
     <!-- MARKET MOOD (moved here from Journal page) -->
