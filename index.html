@@ -11,6 +11,15 @@
   --b1:#1f2228;--b2:#2a2f38;
   --green:#00ff88;--red:#ff3355;--yellow:#ffbb00;--blue:#3d9bff;
   --text:#e8eaf0;--muted:#525870;--muted2:#343848;
+  /* Semantic aliases — convention going forward: success/BUY=green,
+     danger/SHORT=red, warning/AVOID=yellow, info/neutral=blue,
+     momentum/medium-confidence=orange, AI/Claude branding=purple.
+     Existing color usages are untouched (too many touchpoints to safely
+     sweep in one pass); new UI should reference these instead of the raw
+     --green/--red/--yellow/--blue names directly. */
+  --color-success:var(--green);--color-danger:var(--red);
+  --color-warning:var(--yellow);--color-info:var(--blue);
+  --color-momentum:#ff6b35;--color-ai:#a855f7;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;min-height:100vh;overflow-x:hidden;}
@@ -45,6 +54,34 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 /* NAV */
 .nav-wrap{position:sticky;top:0;z-index:100;background:rgba(7,8,10,0.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--b1);margin:0 -14px;padding:0 14px;}
 .nav{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+
+/* ===== VERTICAL NAV MODES (drawer / sidebar) — toggle in Settings ===== */
+#navToggleBtn{display:none;width:30px;height:30px;align-items:center;justify-content:center;background:rgba(255,255,255,0.06);border:1px solid var(--b2);border-radius:6px;color:var(--text);font-size:15px;cursor:pointer;}
+#navBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:998;}
+
+body.nav-vertical #navToggleBtn{display:flex;}
+body.nav-vertical .nav-wrap{margin:0;padding:0;}
+body.nav-vertical .nav{flex-direction:column;overflow-x:visible;align-items:stretch;}
+body.nav-vertical .nav-tab{padding:14px 18px;border-bottom:1px solid var(--b1);border-left:3px solid transparent;}
+body.nav-vertical .nav-tab.active{border-left-color:var(--green);border-bottom-color:var(--b1);}
+
+/* Group labels — only meaningful in a vertical list, hidden in the
+   original horizontal scroll strip so that layout is untouched there */
+.nav-group-label{display:none;}
+body.nav-vertical .nav-group-label{display:block;padding:10px 18px 4px;font-size:8px;letter-spacing:2px;color:var(--muted2);font-weight:700;}
+
+/* Drawer mode: nav slides in as an overlay panel, closed by default */
+body.nav-vertical.nav-mode-drawer .nav-wrap{position:fixed;top:0;left:0;height:100vh;width:230px;z-index:999;
+  transform:translateX(-100%);transition:transform 0.25s ease;overflow-y:auto;border-right:1px solid var(--b1);}
+body.nav-vertical.nav-mode-drawer.nav-open .nav-wrap{transform:translateX(0);}
+body.nav-vertical.nav-mode-drawer.nav-open #navBackdrop{display:block;}
+
+/* Sidebar mode: nav stays visible on the left, page content shifts right; toggle collapses it */
+body.nav-vertical.nav-mode-sidebar .nav-wrap{position:fixed;top:0;left:0;height:100vh;width:160px;z-index:900;
+  overflow-y:auto;border-right:1px solid var(--b1);transition:width 0.25s ease,transform 0.25s ease;}
+body.nav-vertical.nav-mode-sidebar .app{transition:padding-left 0.25s ease;padding-left:160px;}
+body.nav-vertical.nav-mode-sidebar.nav-collapsed .nav-wrap{width:0;transform:translateX(-100%);}
+body.nav-vertical.nav-mode-sidebar.nav-collapsed .app{padding-left:0;}
 .nav::-webkit-scrollbar{display:none;}
 .nav-tab{flex:0 0 auto;padding:13px 18px;font-size:9px;letter-spacing:2px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap;}
 .nav-tab.active{color:var(--green);border-bottom-color:var(--green);}
@@ -321,6 +358,61 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 .mood-btn:hover{border-color:var(--green);color:var(--green);}
 .mood-btn.active-bull{background:rgba(0,255,136,0.1);border-color:var(--green);color:var(--green);}
 .mood-btn.active-bear{background:rgba(255,51,85,0.1);border-color:var(--red);color:var(--red);}
+.nav-layout-btn{background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.2s;color:var(--muted);}
+.nav-layout-btn:hover{border-color:var(--green);color:var(--green);}
+.nav-layout-btn.active-nav-mode{background:rgba(0,255,136,0.1);border-color:var(--green);color:var(--green);}
+
+/* ===== PROFESSIONAL THEME (Settings toggle) =====
+   Off by default — Classic stays pixel-identical to today. When enabled,
+   bumps the smallest inline font sizes and adds breathing room to cards,
+   without touching layout structure, so it can be safely compared and
+   toggled back at any time. */
+body.theme-professional [style*="font-size:7px"]{font-size:9px !important;}
+body.theme-professional [style*="font-size:7.5px"]{font-size:9.5px !important;}
+body.theme-professional [style*="font-size:8px"]{font-size:10.5px !important;}
+body.theme-professional [style*="font-size:8.5px"]{font-size:11px !important;}
+body.theme-professional [style*="font-size:9px"]{font-size:11.5px !important;}
+body.theme-professional [style*="font-size:10px"]{font-size:12.5px !important;}
+body.theme-professional .card{padding:18px !important;margin-bottom:16px !important;}
+body.theme-professional .nav-tab{font-size:11px !important;padding:15px 20px !important;}
+body.theme-professional .card-title{font-size:11px !important;margin-bottom:12px !important;}
+body.theme-professional .disclaimer{font-size:10px !important;padding:12px !important;}
+body.theme-professional .footer{font-size:9.5px !important;}
+body.theme-professional .warning{font-size:10px !important;}
+body.theme-professional .setting-label{font-size:11px !important;}
+body.theme-professional .setting-sub{font-size:9.5px !important;}
+body.theme-professional .mood-btn,body.theme-professional .nav-layout-btn{padding-top:14px !important;padding-bottom:14px !important;}
+/* Loading-state spinner — only shown in Professional theme via ::before on marked elements */
+body.theme-professional .loading-text{display:inline-flex;align-items:center;gap:6px;}
+body.theme-professional .loading-text::before{content:'';width:10px;height:10px;border:2px solid var(--b1);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;}
+/* Button hierarchy — primary (main action) stands out, secondary is neutral,
+   tertiary/destructive is quiet until needed. Classic keeps flat button styling. */
+body.theme-professional .btn-primary{background:var(--green) !important;color:#000 !important;font-weight:700 !important;border:none !important;box-shadow:0 2px 8px rgba(0,255,136,0.25) !important;}
+body.theme-professional .btn-secondary{background:rgba(255,255,255,0.05) !important;color:var(--text) !important;border:1px solid var(--b2) !important;}
+body.theme-professional .btn-tertiary{background:transparent !important;color:var(--muted) !important;border:1px solid var(--b1) !important;}
+body.theme-professional .btn-danger{background:transparent !important;color:var(--red) !important;border:1px solid rgba(255,51,85,0.3) !important;}
+/* Accessibility — brighter muted text for better contrast against the dark background */
+body.theme-professional{--muted:#8a90a8;--muted2:#5a5f75;}
+
+/* Icons vs emoji — Classic shows emoji (unchanged), Professional shows a
+   consistent stroke-icon set instead */
+.tab-icon-pro{display:none;}
+body.theme-professional .tab-emoji{display:none;}
+body.theme-professional .tab-icon-pro{display:inline-flex;align-items:center;justify-content:center;vertical-align:-2px;}
+
+/* ===== ONBOARDING WALKTHROUGH ===== */
+.onboarding-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2000;align-items:center;justify-content:center;padding:20px;}
+.onboarding-overlay.show{display:flex;}
+.onboarding-card{background:var(--s1);border:1px solid var(--b2);border-radius:16px;padding:28px 22px;max-width:340px;width:100%;text-align:center;animation:fadeUp 0.3s ease;}
+.onboarding-dots{display:flex;justify-content:center;gap:6px;margin-bottom:18px;}
+.onboarding-dots span{width:6px;height:6px;border-radius:50%;background:var(--b2);transition:all 0.25s;}
+.onboarding-dots span.active{background:var(--green);width:18px;border-radius:3px;}
+.onboarding-icon{font-size:40px;margin-bottom:14px;}
+.onboarding-title{font-size:15px;font-weight:700;letter-spacing:0.5px;margin-bottom:10px;color:var(--text);}
+.onboarding-body{font-size:11px;line-height:1.6;color:var(--muted);margin-bottom:22px;}
+.onboarding-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.onboarding-skip{background:none;border:none;color:var(--muted);font-size:10px;letter-spacing:1px;cursor:pointer;padding:8px;}
+.onboarding-next{background:var(--green);color:#000;border:none;border-radius:8px;font-weight:700;font-size:11px;letter-spacing:1px;padding:10px 22px;cursor:pointer;}
 .mood-btn.active-neutral{background:rgba(255,187,0,0.1);border-color:var(--yellow);color:var(--yellow);}
 .checklist-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--b1);cursor:pointer;}
 .checklist-item:last-child{border-bottom:none;}
@@ -663,7 +755,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 .momentum-chip {
   font-size: 9px; padding: 2px 6px; border-radius: 4px;
 }
-.momentum-hot { color: #ff6b35; }
+.momentum-hot { color: var(--color-momentum); }
 .momentum-rising { color: var(--green); }
 .momentum-falling { color: var(--red); }
 .momentum-flat { color: var(--muted); }
@@ -862,7 +954,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
   display: inline-flex; align-items: center; gap: 6px;
   background: rgba(255,107,53,0.1); border: 1px solid rgba(255,107,53,0.3);
   border-radius: 6px; padding: 4px 10px;
-  font-size: 9px; color: #ff6b35; font-weight: 700;
+  font-size: 9px; color: var(--color-momentum); font-weight: 700;
 }
 
 .auto-report-banner {
@@ -1016,13 +1108,13 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 /* Signal chip colors in bulk table */
 .signal-chip.BUY.score-green { background: rgba(0,255,136,0.15); color: var(--green); }
 .signal-chip.BUY.score-yellow { background: rgba(255,187,0,0.15); color: var(--yellow); border-color: rgba(255,187,0,0.4); }
-.signal-chip.BUY.score-orange { background: rgba(255,107,53,0.15); color: #ff6b35; border-color: rgba(255,107,53,0.4); }
+.signal-chip.BUY.score-orange { background: rgba(255,107,53,0.15); color: var(--color-momentum); border-color: rgba(255,107,53,0.4); }
 .signal-chip.BUY.score-red { background: rgba(255,51,85,0.15); color: var(--red); border-color: rgba(255,51,85,0.4); }
 
 /* Proceed button colors */
 .proceed-btn.score-green { background: var(--green); color: #07080a; }
 .proceed-btn.score-yellow { background: var(--yellow); color: #07080a; }
-.proceed-btn.score-orange { background: #ff6b35; color: white; }
+.proceed-btn.score-orange { background: var(--color-momentum); color: white; }
 .proceed-btn.score-red { background: var(--red); color: white; }
 
 
@@ -1140,7 +1232,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 .kib-api.replit { color:var(--green); }
 .kib-api.twelvedata { color:var(--blue); }
 .kib-api.alphavantage { color:var(--yellow); }
-.kib-api.claude { color:#a855f7; }
+.kib-api.claude { color:var(--color-ai); }
 .kib-api.other { color:var(--muted); }
 .kib-url { font-size:8px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .kib-status-ok { color:var(--green); font-weight:700; }
@@ -1258,7 +1350,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 .admin-log-api.replit { color: var(--green); }
 .admin-log-api.twelvedata { color: var(--blue); }
 .admin-log-api.alphavantage { color: var(--yellow); }
-.admin-log-api.claude { color: #a855f7; }
+.admin-log-api.claude { color: var(--color-ai); }
 .admin-log-endpoint {
   font-size: 9px; color: var(--muted);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -1331,7 +1423,10 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 <div class="app">
   <!-- TOPBAR -->
   <div class="topbar">
-    <div class="logo">STOCK<span>SENSE</span></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button id="navToggleBtn" onclick="toggleNav()" title="Toggle menu">☰</button>
+      <div class="logo">STOCK<span>SENSE</span></div>
+    </div>
     <div style="display:flex;align-items:center;gap:8px">
       <!-- V27 Fix 14 — Server status visible on ALL tabs -->
       <div id="globalServerDot" onclick="checkGlobalServer()"
@@ -1357,23 +1452,49 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
   </div>
   <div class="t-prog"><div class="t-fill" id="tFill" style="width:0%"></div></div>
 
+  <!-- Backdrop for drawer mode — tap to close -->
+  <div id="navBackdrop" onclick="closeNav()"></div>
+
+  <!-- ONBOARDING WALKTHROUGH — shown once on first launch, replayable from Settings -->
+  <div id="onboardingOverlay" class="onboarding-overlay">
+    <div class="onboarding-card">
+      <div class="onboarding-dots" id="onboardingDots"></div>
+      <div class="onboarding-icon" id="onboardingIcon">👋</div>
+      <div class="onboarding-title" id="onboardingTitle">Welcome to StockSense</div>
+      <div class="onboarding-body" id="onboardingBody">Your personal trading analysis toolkit. Let's take a 30-second tour.</div>
+      <div class="onboarding-actions">
+        <button class="onboarding-skip" onclick="closeOnboarding()">Skip</button>
+        <button class="onboarding-next" id="onboardingNextBtn" onclick="nextOnboardingStep()">Next →</button>
+      </div>
+    </div>
+  </div>
+
   <!-- NAV -->
   <div class="nav-wrap">
     <div class="nav" id="navBar">
-      <div class="nav-tab active" onclick="showPage('analyse')" id="tab-analyse">📊 ANALYSE</div>
-      <div class="nav-tab" onclick="showPage('journal')" id="tab-journal">📓 JOURNAL</div>
-      <div class="nav-tab" onclick="showPage('favourites')" id="tab-favourites">⭐ FAVS</div>
-      <div class="nav-tab" onclick="showPage('bulkscan')" id="tab-bulkscan">🔍 BULK SCAN</div>
-      <div class="nav-tab" onclick="showPage('journal2')" id="tab-journal2">📋 BULK JOURNAL</div>
-      <div class="nav-tab" onclick="showPage('aianalyse')" id="tab-aianalyse">🤖 AI</div>
-      <div class="nav-tab" onclick="showPage('aijournal')" id="tab-aijournal">📒 AI JOURNAL</div>
-      <div class="nav-tab" onclick="showPage('timerscan')" id="tab-timerscan">⏱️ TIMER SCAN</div>
-      <div class="nav-tab" onclick="showPage('timerjournal')" id="tab-timerjournal">📒 TIMER LOG</div>
-      <div class="nav-tab" onclick="showPage('glossary')" id="tab-glossary">📖 GLOSSARY</div>
-      <div class="nav-tab" onclick="showPage('chartpdf')" id="tab-chartpdf">🖼️ CHART PDF</div>
-      <div class="nav-tab" onclick="showPage('stocks')" id="tab-stocks">📁 STOCKS</div>
-      <div class="nav-tab" onclick="showPage('settings')" id="tab-settings">⚙️ SETTINGS</div>
-      <div class="nav-tab" onclick="showPage('admin')" id="tab-admin">🛠️ ADMIN</div>
+      <div class="nav-group-label">ANALYSE</div>
+      <div class="nav-tab active" onclick="showPage('analyse')" id="tab-analyse"><span class="tab-emoji">📊</span><span class="tab-icon-pro" data-icon="bar-chart"></span> ANALYSE</div>
+      <div class="nav-tab" onclick="showPage('bulkscan')" id="tab-bulkscan"><span class="tab-emoji">🔍</span><span class="tab-icon-pro" data-icon="search"></span> BULK SCAN</div>
+      <div class="nav-tab" onclick="showPage('aianalyse')" id="tab-aianalyse"><span class="tab-emoji">🤖</span><span class="tab-icon-pro" data-icon="cpu"></span> AI</div>
+      <div class="nav-tab" onclick="showPage('stocks')" id="tab-stocks"><span class="tab-emoji">📁</span><span class="tab-icon-pro" data-icon="folder"></span> STOCKS</div>
+
+      <div class="nav-group-label">JOURNAL</div>
+      <div class="nav-tab" onclick="showPage('journal')" id="tab-journal"><span class="tab-emoji">📓</span><span class="tab-icon-pro" data-icon="book"></span> TRADE JOURNAL</div>
+      <div class="nav-tab" onclick="showPage('journal2')" id="tab-journal2"><span class="tab-emoji">📋</span><span class="tab-icon-pro" data-icon="clipboard"></span> BULK JOURNAL</div>
+      <div class="nav-tab" onclick="showPage('aijournal')" id="tab-aijournal"><span class="tab-emoji">📒</span><span class="tab-icon-pro" data-icon="bookmark"></span> AI JOURNAL</div>
+      <div class="nav-tab" onclick="showPage('timerjournal')" id="tab-timerjournal"><span class="tab-emoji">📒</span><span class="tab-icon-pro" data-icon="bookmark"></span> TIMER JOURNAL</div>
+
+      <div class="nav-group-label">TIMER</div>
+      <div class="nav-tab" onclick="showPage('timerscan')" id="tab-timerscan"><span class="tab-emoji">⏱️</span><span class="tab-icon-pro" data-icon="timer"></span> TIMER SCAN</div>
+
+      <div class="nav-group-label">TOOLS</div>
+      <div class="nav-tab" onclick="showPage('favourites')" id="tab-favourites"><span class="tab-emoji">⭐</span><span class="tab-icon-pro" data-icon="star"></span> FAVS</div>
+      <div class="nav-tab" onclick="showPage('glossary')" id="tab-glossary"><span class="tab-emoji">📖</span><span class="tab-icon-pro" data-icon="book-open"></span> GLOSSARY</div>
+      <div class="nav-tab" onclick="showPage('chartpdf')" id="tab-chartpdf"><span class="tab-emoji">🖼️</span><span class="tab-icon-pro" data-icon="image"></span> CHART PDF</div>
+
+      <div class="nav-group-label">SYSTEM</div>
+      <div class="nav-tab" onclick="showPage('settings')" id="tab-settings"><span class="tab-emoji">⚙️</span><span class="tab-icon-pro" data-icon="settings"></span> SETTINGS</div>
+      <div class="nav-tab" onclick="showPage('admin')" id="tab-admin"><span class="tab-emoji">🛠️</span><span class="tab-icon-pro" data-icon="tool"></span> ADMIN</div>
     </div>
   </div>
 
@@ -1667,7 +1788,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
     <div class="global-card">
       <div class="card-title">🌍 GLOBAL MARKET IMPACT</div>
       <div id="globalMarkets">
-        <div style="font-size:10px;color:var(--muted);text-align:center;padding:10px">Loading global data...</div>
+        <div class="loading-text" style="font-size:10px;color:var(--muted);text-align:center;padding:10px">Loading global data...</div>
       </div>
       <button onclick="refreshGlobalMarkets()" style="margin-top:8px;width:100%;background:var(--s2);border:1px solid var(--b1);border-radius:6px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:9px;padding:6px;cursor:pointer">
         🔄 REFRESH GLOBAL MARKETS
@@ -2050,6 +2171,47 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
   <!-- SETTINGS -->
   <div class="page" id="page-settings">
     <div class="card">
+      <div class="card-title">🎨 THEME</div>
+      <div style="font-size:9px;color:var(--muted);margin-bottom:10px">Classic = today's exact look. Professional = larger text, more spacing. Switch anytime, no data lost.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="nav-layout-btn" id="themeBtn_classic" onclick="setTheme('classic')">
+          <div style="font-size:16px;margin-bottom:4px">🕹️</div>
+          <div style="font-size:8px;letter-spacing:1px">CLASSIC</div>
+        </div>
+        <div class="nav-layout-btn" id="themeBtn_professional" onclick="setTheme('professional')">
+          <div style="font-size:16px;margin-bottom:4px">💼</div>
+          <div style="font-size:8px;letter-spacing:1px">PROFESSIONAL</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🎓 TUTORIAL</div>
+      <div style="font-size:9px;color:var(--muted);margin-bottom:10px">Replay the welcome walkthrough anytime</div>
+      <button onclick="replayOnboarding()" style="width:100%;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:8px;color:var(--green);font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1px;padding:10px;cursor:pointer">▶ REPLAY TUTORIAL</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📱 TAB LAYOUT</div>
+      <div style="font-size:9px;color:var(--muted);margin-bottom:10px">Choose how the 14 tabs are shown</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="nav-layout-btn" id="navLayoutBtn_horizontal" onclick="setNavLayoutMode('horizontal')">
+          <div style="font-size:16px;margin-bottom:4px">↔️</div>
+          <div style="font-size:8px;letter-spacing:1px">HORIZONTAL</div>
+        </div>
+        <div class="nav-layout-btn" id="navLayoutBtn_drawer" onclick="setNavLayoutMode('drawer')">
+          <div style="font-size:16px;margin-bottom:4px">☰</div>
+          <div style="font-size:8px;letter-spacing:1px">DRAWER</div>
+        </div>
+        <div class="nav-layout-btn" id="navLayoutBtn_sidebar" onclick="setNavLayoutMode('sidebar')">
+          <div style="font-size:16px;margin-bottom:4px">▤</div>
+          <div style="font-size:8px;letter-spacing:1px">SIDEBAR</div>
+        </div>
+      </div>
+      <div style="font-size:8px;color:var(--muted);margin-top:8px">Drawer: tap ☰ to slide the menu in/out. Sidebar: menu stays visible, tap ☰ to hide/unhide.</div>
+    </div>
+
+    <div class="card">
       <div class="card-title">RISK MANAGEMENT</div>
       <div class="setting-row">
         <div><div class="setting-label">Stop Loss %</div><div class="setting-sub">Auto applied to all trades</div></div>
@@ -2144,6 +2306,24 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
         <div style="flex:1;min-width:0">
           <div style="font-size:10px;font-weight:700">Auto</div>
           <div style="font-size:8px;color:var(--muted)">Server detects swing highs/lows from ~40-day price history each scan — self-updating, no manual refresh needed</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">TIER 3 CANDLE STRENGTH</div>
+      <div class="setting-sub" style="margin-bottom:10px">Based on the Days 38-40 pattern analysis: "Strong Bearish/Bullish Candle" and Doji matched actual EOD direction 4/4 each, while the plain "Bearish/Bullish Candle" fallback matched only 2/6 — worse than random, and the exact reading behind all 3 of Day 39's stop-losses. Small sample (3 days) — kept off by default.</div>
+      <div id="candleOptOff" onclick="selectCandleStrengthMode('off')" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;border:1px solid var(--b2);cursor:pointer;margin-bottom:6px;transition:all 0.2s">
+        <div id="candleDotOff" style="width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;font-weight:700">Off (default)</div>
+          <div style="font-size:8px;color:var(--muted)">Original vote weighting, unchanged — "Strong Bearish/Bullish Candle" by name and plain "Bearish/Bullish Candle" count equally</div>
+        </div>
+      </div>
+      <div id="candleOptOn" onclick="selectCandleStrengthMode('on')" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;border:1px solid var(--b2);cursor:pointer;transition:all 0.2s">
+        <div id="candleDotOn" style="width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;font-weight:700">On</div>
+          <div style="font-size:8px;color:var(--muted)">Named "Strong X Candle" gets full 2x weight, Doji 1.5x, plain "Bearish/Bullish Candle" down-weighted to 0.5x</div>
         </div>
       </div>
     </div>
@@ -2243,7 +2423,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
       <div id="versionStamp" style="margin-top:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:6px;font-size:8px;color:var(--muted);letter-spacing:1px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span>📄 index.html</span>
-          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V34.9 — 27 Jul 2026 02:30</span>
+          <span style="color:var(--green);font-weight:700" id="versionIndexTag">V36.2 — 06 Aug 2026</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <span>⚙️ sw.js</span>
@@ -2287,10 +2467,10 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div style="font-size:9px;letter-spacing:3px;color:var(--muted)">🛠️ KIBANA API MONITOR</div>
       <div style="display:flex;gap:6px">
-        <button onclick="kibExportTXT()" style="background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:6px;color:var(--green);font-family:'JetBrains Mono',monospace;font-size:9px;padding:5px 10px;cursor:pointer">📝 TXT</button>
-        <button onclick="kibExportPDF()" style="background:rgba(61,155,255,0.08);border:1px solid rgba(61,155,255,0.2);border-radius:6px;color:var(--blue);font-family:'JetBrains Mono',monospace;font-size:9px;padding:5px 10px;cursor:pointer">📄 PDF</button>
-        <button onclick="kibClear()" style="background:rgba(255,51,85,0.08);border:1px solid rgba(255,51,85,0.2);border-radius:6px;color:var(--red);font-family:'JetBrains Mono',monospace;font-size:9px;padding:5px 10px;cursor:pointer">CLEAR</button>
-        <button onclick="adminRunAllTests()" style="background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:6px;color:var(--green);font-family:'JetBrains Mono',monospace;font-size:9px;padding:5px 10px;cursor:pointer">▶ TEST ALL</button>
+        <button class="btn-secondary" onclick="kibExportTXT()" style="background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:6px;color:var(--green);font-family:'JetBrains Mono',monospace;font-size:9px;padding:5px 10px;cursor:pointer">📝 TXT</button>
+        <button class="btn-secondary" onclick="kibExportPDF()" style="background:rgba(61,155,255,0.08);border:1px solid rgba(61,155,255,0.2);border-radius:6px;color:var(--blue);font-family:'JetBrains Mono',monospace;font-size:9px;padding:5px 10px;cursor:pointer">📄 PDF</button>
+        <button class="btn-danger" onclick="kibClear()" style="background:rgba(255,51,85,0.08);border:1px solid rgba(255,51,85,0.2);border-radius:6px;color:var(--red);font-family:'JetBrains Mono',monospace;font-size:9px;padding:5px 10px;cursor:pointer">CLEAR</button>
+        <button class="btn-primary" onclick="adminRunAllTests()" style="background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:6px;color:var(--green);font-family:'JetBrains Mono',monospace;font-size:9px;padding:5px 10px;cursor:pointer">▶ TEST ALL</button>
       </div>
     </div>
 
@@ -2650,11 +2830,175 @@ function detectCandlePattern(opens, highs, lows, closes) {
 function save(k,v){try{localStorage.setItem('ss5_'+k,JSON.stringify(v));}catch(e){}}
 function load(k,d){try{const v=localStorage.getItem('ss5_'+k);return v!==null?JSON.parse(v):d;}catch(e){return d;}}
 
+// ===== NAV LAYOUT (horizontal / drawer / sidebar) =====
+// 'horizontal' = original scrolling top row (default, unchanged behaviour)
+// 'drawer'     = hamburger opens a vertical slide-in overlay panel
+// 'sidebar'    = vertical panel stays visible on the left; hamburger hides/shows it
+function applyNavLayout(){
+  const mode = load('navLayoutMode', 'horizontal');
+  const body = document.body;
+  body.classList.remove('nav-vertical','nav-mode-drawer','nav-mode-sidebar','nav-open','nav-collapsed');
+  if(mode === 'drawer'){
+    body.classList.add('nav-vertical','nav-mode-drawer');
+  } else if(mode === 'sidebar'){
+    body.classList.add('nav-vertical','nav-mode-sidebar');
+    if(load('navSidebarCollapsed', false)) body.classList.add('nav-collapsed');
+  }
+  // horizontal = no extra classes, falls back to original layout untouched
+}
+
+function toggleNav(){
+  const body = document.body;
+  if(body.classList.contains('nav-mode-drawer')){
+    body.classList.toggle('nav-open');
+  } else if(body.classList.contains('nav-mode-sidebar')){
+    const collapsed = body.classList.toggle('nav-collapsed');
+    save('navSidebarCollapsed', collapsed);
+  }
+}
+
+function closeNav(){
+  document.body.classList.remove('nav-open');
+}
+
+// Called from the Settings page toggle
+function setNavLayoutMode(mode){
+  save('navLayoutMode', mode);
+  applyNavLayout();
+  appLog('SETTINGS','NAV LAYOUT CHANGED',`Mode set to: ${mode.toUpperCase()}`,'info');
+  showNotification(`✅ Tab layout set to ${mode.toUpperCase()}`);
+  renderNavLayoutSettingUI();
+}
+
+function renderNavLayoutSettingUI(){
+  const mode = load('navLayoutMode', 'horizontal');
+  ['horizontal','drawer','sidebar'].forEach(m => {
+    const el = document.getElementById('navLayoutBtn_'+m);
+    if(el) el.classList.toggle('active-nav-mode', m === mode);
+  });
+}
+
+// ===== THEME (Classic / Professional) =====
+// Classic = today's exact look, untouched. Professional = larger text +
+// more card spacing, gated entirely behind this toggle so it's safe to
+// compare and switch back at any time.
+function applyTheme(){
+  const theme = load('appTheme', 'classic');
+  document.body.classList.toggle('theme-professional', theme === 'professional');
+}
+
+// Consistent stroke-style icon set (Feather-style, MIT-licensed shapes) —
+// used in place of emoji when Professional theme is active. Classic mode
+// never touches this; .tab-emoji stays visible there via CSS.
+const TAB_ICONS = {
+  'bar-chart': '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+  'search': '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  'cpu': '<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>',
+  'folder': '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+  'book': '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  'clipboard': '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="16" y2="15"/>',
+  'bookmark': '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
+  'timer': '<line x1="10" y1="2" x2="14" y2="2"/><line x1="12" y1="14" x2="12" y2="8"/><circle cx="12" cy="14" r="8"/>',
+  'star': '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  'book-open': '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  'image': '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
+  'settings': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  'tool': '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+};
+
+function renderTabIcons(){
+  document.querySelectorAll('.tab-icon-pro').forEach(el => {
+    const key = el.getAttribute('data-icon');
+    const path = TAB_ICONS[key];
+    if(path && !el.dataset.rendered){
+      el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+      el.dataset.rendered = '1';
+    }
+  });
+}
+
+// ===== ONBOARDING WALKTHROUGH =====
+const ONBOARDING_STEPS = [
+  { icon: '👋', title: 'Welcome to StockSense', body: "Your personal trading analysis toolkit. Let's take a 30-second tour." },
+  { icon: '📊', title: 'Analyse & Bulk Scan', body: 'Set your trading capital, search any stock for a signal, or run Bulk Scan across dozens of stocks at once for BUY / SHORT / AVOID calls.' },
+  { icon: '⏱️', title: 'Timer Scan & Journals', body: 'Timer Scan automates the 15-minute morning scan. Every trade and scan gets logged automatically in the Journal tabs so you can track accuracy over time.' },
+  { icon: '⚙️', title: 'Make it yours', body: "Head to Settings anytime to switch between Classic and Professional look, or change how the tabs are laid out. You're all set!" },
+];
+let onboardingStep = 0;
+
+function showOnboarding(){
+  onboardingStep = 0;
+  renderOnboardingStep();
+  document.getElementById('onboardingOverlay').classList.add('show');
+}
+
+function renderOnboardingStep(){
+  const s = ONBOARDING_STEPS[onboardingStep];
+  document.getElementById('onboardingIcon').textContent = s.icon;
+  document.getElementById('onboardingTitle').textContent = s.title;
+  document.getElementById('onboardingBody').textContent = s.body;
+  document.getElementById('onboardingDots').innerHTML = ONBOARDING_STEPS.map((_,i)=>
+    `<span class="${i===onboardingStep?'active':''}"></span>`).join('');
+  document.getElementById('onboardingNextBtn').textContent =
+    onboardingStep === ONBOARDING_STEPS.length - 1 ? 'Get Started' : 'Next →';
+}
+
+function nextOnboardingStep(){
+  if(onboardingStep < ONBOARDING_STEPS.length - 1){
+    onboardingStep++;
+    renderOnboardingStep();
+  } else {
+    closeOnboarding();
+  }
+}
+
+function closeOnboarding(){
+  document.getElementById('onboardingOverlay').classList.remove('show');
+  save('onboardingSeen', true);
+}
+
+// Replay from Settings — always resets to step 1
+function replayOnboarding(){
+  showOnboarding();
+}
+
+// Shared empty-state renderer — consistent icon + title + subtitle format
+// used across Trade Journal, Bulk Journal, AI Journal, Timer Journal.
+function emptyStateHTML(icon, title, subtitle){
+  return `<div style="text-align:center;padding:30px 20px;font-size:11px;color:var(--muted)">
+    <div style="font-size:24px;margin-bottom:8px;opacity:0.6">${icon}</div>
+    <div style="font-weight:700;letter-spacing:1px">${title}</div>
+    ${subtitle ? `<div style="font-size:9px;margin-top:6px;opacity:0.8">${subtitle}</div>` : ''}
+  </div>`;
+}
+
+function setTheme(theme){
+  save('appTheme', theme);
+  applyTheme();
+  appLog('SETTINGS','THEME CHANGED',`Theme set to: ${theme.toUpperCase()}`,'info');
+  showNotification(`✅ Theme set to ${theme.toUpperCase()}`);
+  renderThemeSettingUI();
+}
+
+function renderThemeSettingUI(){
+  const theme = load('appTheme', 'classic');
+  ['classic','professional'].forEach(t => {
+    const el = document.getElementById('themeBtn_'+t);
+    if(el) el.classList.toggle('active-nav-mode', t === theme);
+  });
+}
+
 // ===== GLOBAL STATE =====
 let currentResult = null;
 
 // ===== INIT =====
 window.onload=function(){
+  applyNavLayout();
+  renderNavLayoutSettingUI();
+  applyTheme();
+  renderThemeSettingUI();
+  renderTabIcons();
+  if(!load('onboardingSeen', false)) showOnboarding();
   document.getElementById('capitalInput').value=load('capital',10000);
   document.getElementById('slPctIn').value=load('slPct',1.5);
   document.getElementById('tgtPctIn').value=load('tgtPct',2.5);
@@ -2684,6 +3028,8 @@ function saveSetting(k,v){save(k,parseFloat(v));}
 // ===== PAGES =====
 function showPage(name){
   appLog('NAV', 'TAB OPENED', name.toUpperCase());
+  // Auto-close the drawer after picking a tab (sidebar mode stays open)
+  if(document.body.classList.contains('nav-mode-drawer')) closeNav();
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
@@ -2703,6 +3049,7 @@ function showPage(name){
     if(inp) inp.value = parseInt(localStorage.getItem('cpCropY') || '1630');
     renderQueue();
   }
+  if(name==='settings'){ renderNavLayoutSettingUI(); renderThemeSettingUI(); }
   if(name==='bulkscan'){
     loadApiCounts();
     updateApiDisplay();
@@ -3073,7 +3420,7 @@ function addFavSym(sym){const favs=getFavs();if(!favs.includes(sym)){favs.push(s
 function analyseFromFav(sym){document.getElementById('stockInput').value=sym;showPage('analyse');run();}
 function renderFavList(){
   const favs=getFavs();const el=document.getElementById('favList');
-  if(favs.length===0){el.innerHTML=`<div class="fav-empty">⭐ No favourites yet<br><br>Add stocks you trade regularly</div>`;return;}
+  if(favs.length===0){el.innerHTML=emptyStateHTML('⭐','No favourites yet','Add stocks you trade regularly');return;}
   const info=sym=>{const s=getAllStocks().find(x=>x.sym===sym);return s?s.name:'';};
   el.innerHTML=`<div class="fav-list">${favs.map(f=>`<div class="fav-item"><div><div class="fav-sym">${f}</div><div class="fav-name">${info(f)}</div></div><div class="fav-actions"><button class="fav-go" onclick="analyseFromFav('${f}')">ANALYSE</button><button class="fav-rm" onclick="removeFav('${f}')">✕</button></div></div>`).join('')}</div>`;
 }
@@ -4664,7 +5011,7 @@ function exportToPDF(){
 .momentum-chip {
   font-size: 9px; padding: 2px 6px; border-radius: 4px;
 }
-.momentum-hot { color: #ff6b35; }
+.momentum-hot { color: var(--color-momentum); }
 .momentum-rising { color: var(--green); }
 .momentum-falling { color: var(--red); }
 .momentum-flat { color: var(--muted); }
@@ -4863,7 +5210,7 @@ function exportToPDF(){
   display: inline-flex; align-items: center; gap: 6px;
   background: rgba(255,107,53,0.1); border: 1px solid rgba(255,107,53,0.3);
   border-radius: 6px; padding: 4px 10px;
-  font-size: 9px; color: #ff6b35; font-weight: 700;
+  font-size: 9px; color: var(--color-momentum); font-weight: 700;
 }
 
 .auto-report-banner {
@@ -5017,13 +5364,13 @@ function exportToPDF(){
 /* Signal chip colors in bulk table */
 .signal-chip.BUY.score-green { background: rgba(0,255,136,0.15); color: var(--green); }
 .signal-chip.BUY.score-yellow { background: rgba(255,187,0,0.15); color: var(--yellow); border-color: rgba(255,187,0,0.4); }
-.signal-chip.BUY.score-orange { background: rgba(255,107,53,0.15); color: #ff6b35; border-color: rgba(255,107,53,0.4); }
+.signal-chip.BUY.score-orange { background: rgba(255,107,53,0.15); color: var(--color-momentum); border-color: rgba(255,107,53,0.4); }
 .signal-chip.BUY.score-red { background: rgba(255,51,85,0.15); color: var(--red); border-color: rgba(255,51,85,0.4); }
 
 /* Proceed button colors */
 .proceed-btn.score-green { background: var(--green); color: #07080a; }
 .proceed-btn.score-yellow { background: var(--yellow); color: #07080a; }
-.proceed-btn.score-orange { background: #ff6b35; color: white; }
+.proceed-btn.score-orange { background: var(--color-momentum); color: white; }
 .proceed-btn.score-red { background: var(--red); color: white; }
 
 
@@ -5180,7 +5527,7 @@ function exportToPDF(){
       `).join('')}
 
       <div class="footer">
-        StockSense V7 — Personal Trading Analysis Tool | NOT SEBI Registered Advice | Always use stop-loss
+        StockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice | Always use stop-loss
       </div>
     </body>
     </html>
@@ -5389,7 +5736,7 @@ async function startBulkScan(mode){
     let result;
     if(mode === 'affordable'){
       try{
-        const res = await fetch(`${REPLIT_SERVER}/scan?symbol=${symbol}&capital=${capital}&mode=under500&volGateMode=${volGateMode}&buyBlockMode=${buyBlockMode}&levelMode=${levelMode}`);
+        const res = await fetch(`${REPLIT_SERVER}/scan?symbol=${symbol}&capital=${capital}&mode=under500&volGateMode=${volGateMode}&buyBlockMode=${buyBlockMode}&levelMode=${levelMode}&candleStrengthMode=${candleStrengthMode}`);
         const data = await res.json();
         if(data && !data.error){
           // Skip stocks above ₹500 (server already handles logic, but double-check price)
@@ -5887,7 +6234,7 @@ function renderJournal2(){
   if(!el) return;
   const logs = load('journal2_v11',[]);
   if(logs.length===0){
-    el.innerHTML='<div style="text-align:center;padding:30px;font-size:11px;color:var(--muted)">No bulk scans yet.<br>Run a bulk scan to see logs here!</div>';
+    el.innerHTML = emptyStateHTML('📋', 'No bulk scans yet', 'Run a bulk scan to see logs here');
     return;
   }
   el.innerHTML = logs.map(log=>`
@@ -5993,13 +6340,13 @@ function exportSingleJ2(id){
 /* Signal chip colors in bulk table */
 .signal-chip.BUY.score-green { background: rgba(0,255,136,0.15); color: var(--green); }
 .signal-chip.BUY.score-yellow { background: rgba(255,187,0,0.15); color: var(--yellow); border-color: rgba(255,187,0,0.4); }
-.signal-chip.BUY.score-orange { background: rgba(255,107,53,0.15); color: #ff6b35; border-color: rgba(255,107,53,0.4); }
+.signal-chip.BUY.score-orange { background: rgba(255,107,53,0.15); color: var(--color-momentum); border-color: rgba(255,107,53,0.4); }
 .signal-chip.BUY.score-red { background: rgba(255,51,85,0.15); color: var(--red); border-color: rgba(255,51,85,0.4); }
 
 /* Proceed button colors */
 .proceed-btn.score-green { background: var(--green); color: #07080a; }
 .proceed-btn.score-yellow { background: var(--yellow); color: #07080a; }
-.proceed-btn.score-orange { background: #ff6b35; color: white; }
+.proceed-btn.score-orange { background: var(--color-momentum); color: white; }
 .proceed-btn.score-red { background: var(--red); color: white; }
 
 
@@ -6098,7 +6445,7 @@ function exportSingleJ2(id){
           <td class="error">${r.error||''}</td>
         </tr>`).join('')}
     </table>
-    <div class="footer">StockSense V17 | NOT SEBI Registered Advice | Always use stop-loss</div>
+    <div class="footer">StockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice | Always use stop-loss</div>
     </body></html>`;
 
   const w = window.open('','_blank');
@@ -6282,7 +6629,7 @@ function exportJournal2PDF(){
   display: inline-flex; align-items: center; gap: 6px;
   background: rgba(255,107,53,0.1); border: 1px solid rgba(255,107,53,0.3);
   border-radius: 6px; padding: 4px 10px;
-  font-size: 9px; color: #ff6b35; font-weight: 700;
+  font-size: 9px; color: var(--color-momentum); font-weight: 700;
 }
 
 .auto-report-banner {
@@ -6436,13 +6783,13 @@ function exportJournal2PDF(){
 /* Signal chip colors in bulk table */
 .signal-chip.BUY.score-green { background: rgba(0,255,136,0.15); color: var(--green); }
 .signal-chip.BUY.score-yellow { background: rgba(255,187,0,0.15); color: var(--yellow); border-color: rgba(255,187,0,0.4); }
-.signal-chip.BUY.score-orange { background: rgba(255,107,53,0.15); color: #ff6b35; border-color: rgba(255,107,53,0.4); }
+.signal-chip.BUY.score-orange { background: rgba(255,107,53,0.15); color: var(--color-momentum); border-color: rgba(255,107,53,0.4); }
 .signal-chip.BUY.score-red { background: rgba(255,51,85,0.15); color: var(--red); border-color: rgba(255,51,85,0.4); }
 
 /* Proceed button colors */
 .proceed-btn.score-green { background: var(--green); color: #07080a; }
 .proceed-btn.score-yellow { background: var(--yellow); color: #07080a; }
-.proceed-btn.score-orange { background: #ff6b35; color: white; }
+.proceed-btn.score-orange { background: var(--color-momentum); color: white; }
 .proceed-btn.score-red { background: var(--red); color: white; }
 
 
@@ -6542,7 +6889,7 @@ function exportJournal2PDF(){
         </table>
       </div>
     `).join('')}
-    <div class="footer">StockSense V11 — NOT SEBI Registered Advice | Always use stop-loss</div>
+    <div class="footer">StockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice | Always use stop-loss</div>
     </body></html>
   `;
   const w = window.open('','_blank');
@@ -7071,6 +7418,10 @@ async function getDynamic25(allResults){
 }
 
 
+// ===== APP VERSION (single source of truth — update here only) =====
+const APP_VERSION = 'V36.2';
+const APP_VERSION_DATE = '06 Aug 2026';
+
 // ===== SERVER STATUS MANAGER =====
 let serverOnline = false;
 let serverCheckInterval = null;
@@ -7091,7 +7442,10 @@ function syncWakeUI(state, attemptMsg){
     const text = document.getElementById(set.text);
     const btn = document.getElementById(set.btn);
     if(dot) dot.className = 'server-dot ' + (state === 'online' ? 'online' : state === 'checking' ? 'checking' : 'offline');
-    if(text) text.textContent = state === 'online' ? 'Online ✅' : state === 'checking' ? 'Checking...' : 'Offline / Sleeping 😴';
+    if(text){
+      text.textContent = state === 'online' ? 'Online ✅' : state === 'checking' ? 'Checking...' : 'Offline / Sleeping 😴';
+      text.className = state === 'checking' ? 'loading-text' : '';
+    }
     if(btn){
       if(state === 'online'){
         btn.className = 'wake-btn awake';
@@ -7271,8 +7625,8 @@ function appLog(category, action, detail='', level='info'){
 // Category colours
 function appLogCategoryColor(cat){
   const map = {
-    'APP':'#a855f7', 'NAV':'#3d9bff', 'SCAN':'#00ff88',
-    'ANALYSE':'#00ff88', 'BULK':'#ffbb00', 'AI':'#a855f7',
+    'APP':'var(--color-ai)', 'NAV':'var(--color-info)', 'SCAN':'var(--color-success)',
+    'ANALYSE':'var(--color-success)', 'BULK':'var(--color-warning)', 'AI':'var(--color-ai)',
     'MOOD':'#ff9500', 'ALERT':'#ff3355', 'ERROR':'#ff3355',
     'TIMER':'#00ff88', 'EXPORT':'#3d9bff', 'SERVER':'#00ff88',
     'FALLBACK':'#ffbb00', 'AUTO':'#00ff88'
@@ -7555,7 +7909,7 @@ function renderAIJournal(){
   if(!el) return;
   const journal = getAIJournal();
   if(journal.length === 0){
-    el.innerHTML = '<div style="text-align:center;padding:20px;font-size:11px;color:var(--muted)">No AI analyses yet.</div>';
+    el.innerHTML = emptyStateHTML('🤖', 'No AI analyses yet', 'Run an AI analysis to see it logged here');
     return;
   }
   el.innerHTML = journal.map(e => renderAIEntry(e)).join('');
@@ -7623,13 +7977,13 @@ function exportSingleAI(id){
 /* Signal chip colors in bulk table */
 .signal-chip.BUY.score-green { background: rgba(0,255,136,0.15); color: var(--green); }
 .signal-chip.BUY.score-yellow { background: rgba(255,187,0,0.15); color: var(--yellow); border-color: rgba(255,187,0,0.4); }
-.signal-chip.BUY.score-orange { background: rgba(255,107,53,0.15); color: #ff6b35; border-color: rgba(255,107,53,0.4); }
+.signal-chip.BUY.score-orange { background: rgba(255,107,53,0.15); color: var(--color-momentum); border-color: rgba(255,107,53,0.4); }
 .signal-chip.BUY.score-red { background: rgba(255,51,85,0.15); color: var(--red); border-color: rgba(255,51,85,0.4); }
 
 /* Proceed button colors */
 .proceed-btn.score-green { background: var(--green); color: #07080a; }
 .proceed-btn.score-yellow { background: var(--yellow); color: #07080a; }
-.proceed-btn.score-orange { background: #ff6b35; color: white; }
+.proceed-btn.score-orange { background: var(--color-momentum); color: white; }
 .proceed-btn.score-red { background: var(--red); color: white; }
 
 
@@ -7736,7 +8090,7 @@ function exportSingleAI(id){
         <div class="level-box"><div class="level-label">TARGET</div><div class="level-val" style="color:#008000">${entry.target}</div></div>
       </div>
     </div>
-    <div class="footer">StockSense V16 AI Analysis | NOT SEBI Registered Advice | Always use stop-loss</div>
+    <div class="footer">StockSense ${APP_VERSION} AI Analysis | Personal Use Only — NOT SEBI Advice | Always use stop-loss</div>
     </body></html>`;
 
   const w = window.open('','_blank');
@@ -7799,13 +8153,13 @@ function exportAllAIJournal(){
 /* Signal chip colors in bulk table */
 .signal-chip.BUY.score-green { background: rgba(0,255,136,0.15); color: var(--green); }
 .signal-chip.BUY.score-yellow { background: rgba(255,187,0,0.15); color: var(--yellow); border-color: rgba(255,187,0,0.4); }
-.signal-chip.BUY.score-orange { background: rgba(255,107,53,0.15); color: #ff6b35; border-color: rgba(255,107,53,0.4); }
+.signal-chip.BUY.score-orange { background: rgba(255,107,53,0.15); color: var(--color-momentum); border-color: rgba(255,107,53,0.4); }
 .signal-chip.BUY.score-red { background: rgba(255,51,85,0.15); color: var(--red); border-color: rgba(255,51,85,0.4); }
 
 /* Proceed button colors */
 .proceed-btn.score-green { background: var(--green); color: #07080a; }
 .proceed-btn.score-yellow { background: var(--yellow); color: #07080a; }
-.proceed-btn.score-orange { background: #ff6b35; color: white; }
+.proceed-btn.score-orange { background: var(--color-momentum); color: white; }
 .proceed-btn.score-red { background: var(--red); color: white; }
 
 
@@ -7898,7 +8252,7 @@ function exportAllAIJournal(){
           <div style="border:1px solid #ccc;padding:4px"><div style="font-size:9px;color:#666">TARGET</div><div style="color:#008000">${e.target}</div></div>
         </div>
       </div>`).join('')}
-    <div class="footer">StockSense V16 | NOT SEBI Registered Advice | Always use stop-loss</div>
+    <div class="footer">StockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice | Always use stop-loss</div>
     </body></html>`;
 
   const w = window.open('','_blank');
@@ -7956,13 +8310,13 @@ function exportSingleAnalysisLog(id){
 /* Signal chip colors in bulk table */
 .signal-chip.BUY.score-green { background: rgba(0,255,136,0.15); color: var(--green); }
 .signal-chip.BUY.score-yellow { background: rgba(255,187,0,0.15); color: var(--yellow); border-color: rgba(255,187,0,0.4); }
-.signal-chip.BUY.score-orange { background: rgba(255,107,53,0.15); color: #ff6b35; border-color: rgba(255,107,53,0.4); }
+.signal-chip.BUY.score-orange { background: rgba(255,107,53,0.15); color: var(--color-momentum); border-color: rgba(255,107,53,0.4); }
 .signal-chip.BUY.score-red { background: rgba(255,51,85,0.15); color: var(--red); border-color: rgba(255,51,85,0.4); }
 
 /* Proceed button colors */
 .proceed-btn.score-green { background: var(--green); color: #07080a; }
 .proceed-btn.score-yellow { background: var(--yellow); color: #07080a; }
-.proceed-btn.score-orange { background: #ff6b35; color: white; }
+.proceed-btn.score-orange { background: var(--color-momentum); color: white; }
 .proceed-btn.score-red { background: var(--red); color: white; }
 
 
@@ -8052,7 +8406,7 @@ function exportSingleAnalysisLog(id){
       <tr><td>Loss if SL</td><td>-Rs.${parseFloat(log.lossRs||0).toFixed(0)}</td></tr>
     </table>
     <div style="margin-top:10px"><strong>Key Reasons:</strong><br>${(log.reasons||[]).join('<br>')}</div>
-    <div class="footer">StockSense V16 | NOT SEBI Registered Advice</div>
+    <div class="footer">StockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice</div>
     </body></html>`;
 
   const w = window.open('','_blank');
@@ -8876,7 +9230,7 @@ async function runTimerScanOnce(){
     try{
       // V7: Call /api/scan — server computes all indicators + hard blocks
       const fetchStart = Date.now();
-      const res = await fetch(`${REPLIT_SERVER}/scan?symbol=${symbol}&capital=${capital}&volGateMode=${volGateMode}&buyBlockMode=${buyBlockMode}&levelMode=${levelMode}`);
+      const res = await fetch(`${REPLIT_SERVER}/scan?symbol=${symbol}&capital=${capital}&volGateMode=${volGateMode}&buyBlockMode=${buyBlockMode}&levelMode=${levelMode}&candleStrengthMode=${candleStrengthMode}`);
       const r = await res.json();
       const fetchMs = Date.now()-fetchStart;
 
@@ -9084,7 +9438,7 @@ function renderTimerLatestSummary(results){
           ? `<span style="background:#00ff88;color:#000;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800">✅ ${persist} SCANS</span>`
           : `<span style="background:#ff6b00;color:#fff;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800">⚠️ ${persist} SCAN${persist>1?'S':''} — WEAK</span>`;
         const extBadge = r.isExtended ? `<span style="background:#cc8800;color:#fff;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800;margin-left:3px">⚠️ EXTENDED</span>` : '';
-        const pennyBadge = r.isPennyStock ? `<span style="background:#9c27b0;color:#fff;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800;margin-left:3px">⚠️ PENNY</span>` : '';
+        const pennyBadge = r.isPennyStock ? `<span style="background:var(--color-ai);color:#fff;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800;margin-left:3px">⚠️ PENNY</span>` : '';
         const slBadge = r.highRiskSL ? `<span style="background:#cc0000;color:#fff;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800;margin-left:3px">🔴 HIGH RISK SL</span>` : '';
         const volBadge = r.isLowVol ? (r.volImproving
           ? `<span style="background:#1565c0;color:#fff;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800;margin-left:3px">📈 VOL RISING</span>`
@@ -9110,7 +9464,7 @@ function renderTimerJournal(){
   if(!el) return;
   const logs = getTimerJournal();
   if(logs.length===0){
-    el.innerHTML='<div style="text-align:center;padding:30px;font-size:11px;color:var(--muted)">No timer scans yet.<br>Go to Timer Scan tab and start!</div>';
+    el.innerHTML = emptyStateHTML('⏱️', 'No timer scans yet', 'Go to Timer Scan tab and start a scan');
     return;
   }
   el.innerHTML = logs.map(log=>`
@@ -9133,7 +9487,7 @@ function renderTimerJournal(){
       </div>
       ${log.results.filter(r=>r.signal==='BUY'||r.signal==='SHORT').map(r=>{
         const extBadge = r.isExtended ? `<span style="background:#cc8800;color:#fff;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:700;margin-left:3px">⚠️ EXTENDED</span>` : '';
-        const pennyBadge = r.isPennyStock ? `<span style="background:#9c27b0;color:#fff;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:700;margin-left:3px">⚠️ PENNY</span>` : '';
+        const pennyBadge = r.isPennyStock ? `<span style="background:var(--color-ai);color:#fff;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:700;margin-left:3px">⚠️ PENNY</span>` : '';
         const slBadge = r.highRiskSL ? `<span style="background:#cc0000;color:#fff;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:700;margin-left:3px">🔴 HIGH RISK SL</span>` : '';
         const volBadge = r.isLowVol ? (r.volImproving
           ? `<span style="background:#1565c0;color:#fff;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:700;margin-left:3px">📈 VOL RISING</span>`
@@ -9210,7 +9564,7 @@ function exportSingleTimerScan(id){
         <div class="stock-header">
           <div class="stock-sym">${r.symbol}
             ${r.isExtended?'<span style="background:#cc8800;color:#fff;border-radius:3px;padding:1px 5px;font-size:8px;margin-left:4px">⚠️ EXTENDED</span>':''}
-            ${r.isPennyStock?'<span style="background:#9c27b0;color:#fff;border-radius:3px;padding:1px 5px;font-size:8px;margin-left:4px">⚠️ PENNY</span>':''}
+            ${r.isPennyStock?'<span style="background:var(--color-ai);color:#fff;border-radius:3px;padding:1px 5px;font-size:8px;margin-left:4px">⚠️ PENNY</span>':''}
             ${r.highRiskSL?'<span style="background:#cc0000;color:#fff;border-radius:3px;padding:1px 5px;font-size:8px;margin-left:4px">🔴 HIGH RISK SL</span>':''}
             ${r.isLowVol?(r.volImproving?'<span style="background:#1565c0;color:#fff;border-radius:3px;padding:1px 5px;font-size:8px;margin-left:4px">📈 VOL RISING</span>':'<span style="background:#e65100;color:#fff;border-radius:3px;padding:1px 5px;font-size:8px;margin-left:4px">⚠️ LOW VOL</span>'):''}
             ${r.sectorWeak?'<span style="background:#cc8800;color:#fff;border-radius:3px;padding:1px 5px;font-size:8px;margin-left:4px">⚠️ SECTOR WEAK</span>':''}
@@ -9228,7 +9582,7 @@ function exportSingleTimerScan(id){
           <div class="level-box"><div style="font-size:8px;color:#666">TARGET</div><div style="color:#008000">Rs.${r.tgtPrice.toFixed(2)}</div></div>
         </div>
       </div>`).join('')}
-    <div class="footer">StockSense V33 Timer Scan | Replit Server | NOT SEBI Registered Advice | Always use stop-loss</div>
+    <div class="footer">StockSense ${APP_VERSION} Timer Scan | Replit Server | Personal Use Only — NOT SEBI Advice | Always use stop-loss</div>
     </body></html>`;
 
   const w = window.open('','_blank');
@@ -9604,7 +9958,7 @@ function renderGlobalMarketsReal(data, elementId){
   const el = document.getElementById(elementId);
   if(!el) return;
   if(!data){
-    el.innerHTML = '<div style="font-size:10px;color:var(--muted);text-align:center;padding:10px">Loading global data...</div>';
+    el.innerHTML = '<div class="loading-text" style="font-size:10px;color:var(--muted);text-align:center;padding:10px">Loading global data...</div>';
     return;
   }
 
@@ -10038,13 +10392,13 @@ function exportSingleTrade(id){
 /* Signal chip colors in bulk table */
 .signal-chip.BUY.score-green { background: rgba(0,255,136,0.15); color: var(--green); }
 .signal-chip.BUY.score-yellow { background: rgba(255,187,0,0.15); color: var(--yellow); border-color: rgba(255,187,0,0.4); }
-.signal-chip.BUY.score-orange { background: rgba(255,107,53,0.15); color: #ff6b35; border-color: rgba(255,107,53,0.4); }
+.signal-chip.BUY.score-orange { background: rgba(255,107,53,0.15); color: var(--color-momentum); border-color: rgba(255,107,53,0.4); }
 .signal-chip.BUY.score-red { background: rgba(255,51,85,0.15); color: var(--red); border-color: rgba(255,51,85,0.4); }
 
 /* Proceed button colors */
 .proceed-btn.score-green { background: var(--green); color: #07080a; }
 .proceed-btn.score-yellow { background: var(--yellow); color: #07080a; }
-.proceed-btn.score-orange { background: #ff6b35; color: white; }
+.proceed-btn.score-orange { background: var(--color-momentum); color: white; }
 .proceed-btn.score-red { background: var(--red); color: white; }
 
 
@@ -10130,7 +10484,7 @@ function exportSingleTrade(id){
       <tr><td>P&L</td><td style="color:${pnl>=0?'green':'red'}">${pnl>=0?'+':''}Rs.${pnl.toFixed(0)}</td></tr>
       <tr><td>Notes</td><td>${trade.notes||'--'}</td></tr>
     </table>
-    <div class="footer">StockSense V16 | NOT SEBI Registered Advice</div>
+    <div class="footer">StockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice</div>
     </body></html>`;
   const w = window.open('','_blank');
   w.document.write(printContent);
@@ -10212,7 +10566,7 @@ function renderPerfSummary(){
 function renderTradeHistory(){
   const el = document.getElementById('tradeHistory');
   if(trades.length === 0){
-    el.innerHTML = `<div style="text-align:center;padding:20px;font-size:11px;color:var(--muted)">No trades yet</div>`;
+    el.innerHTML = emptyStateHTML('📓', 'No trades yet', 'Log your first trade below to start tracking');
     return;
   }
 
@@ -10693,6 +11047,26 @@ function selectLevelMode(mode) {
   showNotification(`Tier 3 level target: ${mode.toUpperCase()}`, 3000);
 }
 
+let candleStrengthMode = 'off';
+function renderCandleStrengthSelector() {
+  ['off','on'].forEach(m => {
+    const dot = document.getElementById('candleDot' + m.charAt(0).toUpperCase() + m.slice(1));
+    const opt = document.getElementById('candleOpt' + m.charAt(0).toUpperCase() + m.slice(1));
+    const active = (m === candleStrengthMode);
+    const activeColor = m === 'off' ? 'var(--muted)' : 'var(--green)';
+    if (dot && opt) {
+      dot.style.background = active ? activeColor : 'var(--muted)';
+      opt.style.border = active ? '1px solid ' + activeColor : '1px solid var(--b2)';
+    }
+  });
+}
+function selectCandleStrengthMode(mode) {
+  candleStrengthMode = mode; // NOT saved to localStorage on purpose — defaults to off at each app load
+  renderCandleStrengthSelector();
+  appLog('SETTINGS','TIER3 CANDLE STRENGTH CHANGED',`Mode: ${mode.toUpperCase()} — candle vote weighting for the 8 Tier 3 symbols`, 'info');
+  showNotification(`Tier 3 candle strength: ${mode.toUpperCase()}`, 3000);
+}
+
 function selectServer(key) {
   // Persist choice
   save('activeServer', key);
@@ -10744,6 +11118,7 @@ document.addEventListener('DOMContentLoaded', initServerSelector);
 document.addEventListener('DOMContentLoaded', renderVolGateSelector); // V41: always starts at 'strict'
 document.addEventListener('DOMContentLoaded', renderBuyBlockSelector); // V41: always starts at 'strict'
 document.addEventListener('DOMContentLoaded', renderLevelModeSelector); // V41.3: always starts at 'off'
+document.addEventListener('DOMContentLoaded', renderCandleStrengthSelector); // V7.8: always starts at 'off'
 
 function downloadTXT(filename, content){
   const blob = new Blob([content], {type:'text/plain'});
@@ -10779,7 +11154,7 @@ function exportTimerLogsTXT(){
     if(shorts.length){ txt += `SHORT:\n`; shorts.forEach(r=>{ txt+=`  ${cleanS(r.symbol)} ${r.confidence}% | Rs.${r.price} | RSI:${r.rsi?.toFixed(1)} | Vol:${r.volRatio?.toFixed(2)}x\n`; (r.reasons||[]).forEach(re=>txt+=`    ${cleanT(re)}\n`); }); }
     txt += '\n';
   });
-  txt += `StockSense V33 | NOT SEBI Advice | Always use stop-loss`;
+  txt += `StockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice | Always use stop-loss`;
   downloadTXT(`${datePrefix}_StockSense_AllTimerLogs.txt`, txt);
 }
 
@@ -10791,7 +11166,7 @@ function exportBulkJournalTXT(){
   logs.forEach(log => {
     txt += `BULK SCAN — ${log.date||''} at ${log.time||''}\n${log.total||0} stocks | BUY:${log.buys||0} SHORT:${log.shorts||0} AVOID:${log.avoids||0}\n${'-'.repeat(40)}\n\n`;
   });
-  txt += `StockSense V33 | NOT SEBI Advice`;
+  txt += `StockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice`;
   const dd2=String(now.getDate()).padStart(2,'0'),mm2=String(now.getMonth()+1).padStart(2,'0'),yyyy2=now.getFullYear();
   downloadTXT(`${dd2}-${mm2}-${yyyy2}_StockSense_BulkJournal.txt`, txt);
 }
@@ -10809,7 +11184,7 @@ function exportAnalysisLogTXT(){
     if(log.reasons?.length){ log.reasons.forEach(r=>txt+=`  ${r}\n`); }
     txt += '\n';
   });
-  txt += `StockSense V33 | NOT SEBI Advice`;
+  txt += `StockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice`;
   const dd3=String(now.getDate()).padStart(2,'0'),mm3=String(now.getMonth()+1).padStart(2,'0'),yyyy3=now.getFullYear();
   downloadTXT(`${dd3}-${mm3}-${yyyy3}_StockSense_AnalysisLog.txt`, txt);
 }
@@ -10826,7 +11201,7 @@ function exportAIJournalTXT(){
     if(log.reasons?.length){ log.reasons.forEach(r=>txt+=`  • ${r}\n`); }
     txt += '\n';
   });
-  txt += `StockSense V33 | NOT SEBI Advice`;
+  txt += `StockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice`;
   const dd4=String(now.getDate()).padStart(2,'0'),mm4=String(now.getMonth()+1).padStart(2,'0'),yyyy4=now.getFullYear();
   downloadTXT(`${dd4}-${mm4}-${yyyy4}_StockSense_AIJournal.txt`, txt);
 }
@@ -10844,7 +11219,7 @@ function exportSingleAnalysisLogTXT(id){
   txt += `VWAP: Rs.${log.vwap||'--'} | Candle: ${log.candle||'--'}\n`;
   txt += `SL: Rs.${log.sl||'--'} | Target: Rs.${log.target||'--'}\n\n`;
   if(log.reasons?.length){ txt += `Reasons:\n`; log.reasons.forEach(r=>txt+=`  ${r}\n`); }
-  txt += `\nStockSense V33 | NOT SEBI Advice`;
+  txt += `\nStockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice`;
   const _d=new Date(id),_dd=String(_d.getDate()).padStart(2,'0'),_mm=String(_d.getMonth()+1).padStart(2,'0'),_yy=_d.getFullYear();
   downloadTXT(`${_dd}-${_mm}-${_yy}_${log.symbol}_Analysis.txt`, txt);
 }
@@ -10858,7 +11233,7 @@ function exportSingleAITXT(id){
   txt += `Date: ${entry.timestamp||'--'}\n`;
   if(entry.news) txt += `News: ${entry.news}\n`;
   if(entry.reasons?.length){ txt += `\nReasons:\n`; entry.reasons.forEach(r=>txt+=`  • ${r}\n`); }
-  txt += `\nStockSense V33 | NOT SEBI Advice`;
+  txt += `\nStockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice`;
   const _d2=new Date(id),_dd2=String(_d2.getDate()).padStart(2,'0'),_mm2=String(_d2.getMonth()+1).padStart(2,'0'),_yy2=_d2.getFullYear();
   downloadTXT(`${_dd2}-${_mm2}-${_yy2}_${entry.symbol}_AIAnalysis.txt`, txt);
 }
@@ -10909,7 +11284,7 @@ function exportSingleTimerScanTXT(id){
 
   writeStocks(buys, 'BUY SIGNALS');
   writeStocks(shorts, 'SHORT SIGNALS');
-  txt += `StockSense V33 | NOT SEBI Advice | Always use stop-loss`;
+  txt += `StockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice | Always use stop-loss`;
   downloadTXT(`${datePrefix}_TimerScan_${log.scanNum}.txt`, txt);
 }
 
@@ -10924,7 +11299,7 @@ function exportSingleJ2TXT(id){
   const shorts = (log.results||[]).filter(r=>r.signal==='SHORT');
   if(buys.length){ txt+=`BUY SIGNALS:\n`; buys.forEach(r=>txt+=`  ${r.symbol} ${r.confidence}% | Rs.${r.price}\n`); }
   if(shorts.length){ txt+=`\nSHORT SIGNALS:\n`; shorts.forEach(r=>txt+=`  ${r.symbol} ${r.confidence}% | Rs.${r.price}\n`); }
-  txt += `\nStockSense V33 | NOT SEBI Advice`;
+  txt += `\nStockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice`;
   const _d3=new Date(id),_dd3=String(_d3.getDate()).padStart(2,'0'),_mm3=String(_d3.getMonth()+1).padStart(2,'0'),_yy3=_d3.getFullYear();
   downloadTXT(`${_dd3}-${_mm3}-${_yy3}_BulkScan.txt`, txt);
 }
@@ -11216,7 +11591,7 @@ async function exportChartPDF(){
     // Footer on last page
     pdf.setFontSize(7);
     pdf.setTextColor(100, 100, 100);
-    pdf.text('StockSense V33 | Personal Use Only — NOT SEBI Advice', A4_W/2, 293, { align: 'center' });
+    pdf.text(`StockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice`, A4_W/2, 293, { align: 'center' });
 
     const _pn=new Date(),_pdd=String(_pn.getDate()).padStart(2,'0'),_pmm=String(_pn.getMonth()+1).padStart(2,'0'),_pyy=_pn.getFullYear();
     const filename = `${_pdd}-${_pmm}-${_pyy}_StockSense_Charts.pdf`;
@@ -11530,7 +11905,7 @@ function kibExportTXT(){
     }
     txt += '\n';
   });
-  txt += `\nStockSense V33 | NOT SEBI Advice`;
+  txt += `\nStockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice`;
   appLog('EXPORT','KIBANA TXT DONE',`File: StockSense_APILog_TXT_${datePrefix}.txt | ${Math.round(txt.length/1024)}KB`,'success');
   downloadTXT(`StockSense_APILog_TXT_${datePrefix}.txt`, txt);
 }
@@ -11626,7 +12001,7 @@ function kibExportPDF(){
     <thead><tr><th>TIMESTAMP</th><th>TYPE</th><th>API</th><th>ENDPOINT</th><th>STATUS</th><th>TIME</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
-  <div class="footer">StockSense V33 Kibana Log | NOT SEBI Advice | Always use stop-loss</div>
+  <div class="footer">StockSense ${APP_VERSION} Kibana Log | Personal Use Only — NOT SEBI Advice | Always use stop-loss</div>
   </body></html>`;
 
   // Fix A: Use Blob URL instead of window.open + document.write (handles large data)
@@ -11741,7 +12116,7 @@ async function adminRunManualTest(){
     replit_intraday: REPLIT_SERVER+'/intraday?symbol='+sym,
     replit_vwap: REPLIT_SERVER+'/vwap?symbol='+sym,
     replit_bulk: REPLIT_SERVER+'/bulk',
-    replit_scan: REPLIT_SERVER+'/scan?symbol='+sym+'&volGateMode='+volGateMode+'&buyBlockMode='+buyBlockMode+'&levelMode='+levelMode,
+    replit_scan: REPLIT_SERVER+'/scan?symbol='+sym+'&volGateMode='+volGateMode+'&buyBlockMode='+buyBlockMode+'&levelMode='+levelMode+'&candleStrengthMode='+candleStrengthMode,
     replit_scanall: REPLIT_SERVER+'/scanall',
     replit_globalmarkets: REPLIT_SERVER+'/globalmarkets',
     twelvedata_series: `https://api.twelvedata.com/time_series?symbol=${sym}%3ANSE&interval=1day&outputsize=5&apikey=${TD_KEY}`,
@@ -11820,7 +12195,7 @@ function kibExportActivityTXT(){
   [...appActivityLog].reverse().forEach(l=>{
     txt+=`[${l.ts}] ${l.category.padEnd(8)} | ${l.action.padEnd(25)} | ${l.detail}\n`;
   });
-  txt+=`\nStockSense V33 | NOT SEBI Advice`;
+  txt+=`\nStockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice`;
   downloadTXT(`StockSense_ActivityLog_TXT_${dd}-${mm}-${yyyy}.txt`, txt);
 }
 
@@ -11854,7 +12229,7 @@ function kibExportActivityPDF(){
   <div style="font-size:9px;color:#666;margin-bottom:12px">Exported: ${dd}/${mm}/${yyyy} | ${appActivityLog.length} events</div>
   <table><thead><tr><th>TIMESTAMP</th><th>CATEGORY</th><th>ACTION</th><th>DETAIL</th></tr></thead>
   <tbody>${rows}</tbody></table>
-  <div class="footer">StockSense V33 | NOT SEBI Advice | Always use stop-loss</div>
+  <div class="footer">StockSense ${APP_VERSION} | Personal Use Only — NOT SEBI Advice | Always use stop-loss</div>
   </body></html>`;
   try {
     const blob = new Blob([html], {type:'text/html;charset=utf-8'});
